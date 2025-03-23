@@ -21,7 +21,7 @@ const scoreSchema = new mongoose.Schema({
     username: String,
     score: Number,
     correctStreak: Number,
-    mostStreak: Number // Add mostStreak to the schema
+    mostStreak: Number
 });
 const Score = mongoose.model('Score', scoreSchema);
 
@@ -52,9 +52,9 @@ app.get('/api/player/:username', async (req, res) => {
     try {
         const player = await Score.findOne({ username });
         if (player) {
-            res.json({ score: player.score, correctStreak: player.correctStreak, mostStreak: player.mostStreak }); //Also fetch mostStreak
+            res.json({ score: player.score, correctStreak: player.correctStreak, mostStreak: player.mostStreak });
         } else {
-            res.json({ score: 0, correctStreak: 0, mostStreak: 0 });  //Default value
+            res.json({ score: 0, correctStreak: 0, mostStreak: 0 });
         }
     } catch (error) {
         res.status(500).send('Error fetching player data: ' + error.message);
@@ -62,10 +62,10 @@ app.get('/api/player/:username', async (req, res) => {
 });
 
 app.get('/api/leaderboard', async (req, res) => {
-    const sortBy = req.query.sortBy === 'mostStreak' ? 'mostStreak' : 'score'; // Validate sortBy
+    const sortBy = req.query.sortBy === 'mostStreak' ? 'mostStreak' : 'score';
     const username = req.query.username;
     try {
-        const leaderboard = await Score.find().sort({ [sortBy]: -1 }).limit(10).lean(); // Fetch top 10
+        const leaderboard = await Score.find().sort({ [sortBy]: -1 }).limit(10).lean();
 
         let userRank = null;
         let userScore = 0;

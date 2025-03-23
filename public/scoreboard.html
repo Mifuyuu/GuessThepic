@@ -2,10 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale: 1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scoreboard</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- Use your existing style.css -->
+    <link rel="stylesheet" href="style.css">  <!-- Use your existing style.css -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -82,7 +81,7 @@
         let username = localStorage.getItem('username'); // Retrieve username
 
         backToGameButton.addEventListener('click', () => {
-            window.location.href = 'index.html';
+            window.location.href = 'index.html'; // Redirect to the game
         });
 
         sortBySelect.addEventListener('change', () => {
@@ -91,12 +90,10 @@
 
         async function fetchLeaderboard(sortBy = 'score') {
             try {
-                const response = await fetch(`/api/leaderboard?sortBy=${sortBy}&username=${username}`, {
-                    headers: { 'X-Secret-Key': localStorage.getItem('secretKey') }
-                });
+                const response = await fetch(`/api/leaderboard?sortBy=${sortBy}&username=${username}`);
                 const data = await response.json();
 
-                leaderboardDiv.innerHTML = '';
+                leaderboardDiv.innerHTML = ''; // Clear existing leaderboard
 
                 if (data.leaderboard.length === 0) {
                     noRankingMessage.style.display = 'block';
@@ -118,12 +115,12 @@
                     userRankTextSpan.textContent = `Rank ${data.userRank}, Score: ${data.userScore}, Most Streak: ${data.userMostStreak}`;
 
                     const row = document.createElement('div');
-                    row.className = 'scoreboard-row';
-                    row.innerHTML = `
+                        row.className = 'scoreboard-row';
+                        row.innerHTML = `
                             <span>${data.userRank}. ${username}</span>
                             <span>Score: ${data.userScore}, Most Streak: ${data.userMostStreak}</span>
                         `;
-                    leaderboardDiv.appendChild(row);
+                        leaderboardDiv.appendChild(row);
 
                 } else {
                     userRankDiv.style.display = 'none';
