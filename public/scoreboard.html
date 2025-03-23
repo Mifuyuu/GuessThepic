@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale: 1.0">
+    <title>Scoreboard</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Use your existing style.css -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #scoreboard-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        #sort-by {
+            margin-bottom: 10px;
+        }
+
+        .scoreboard-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .scoreboard-row:last-child {
+            border-bottom: none;
+        }
+
+        .no-ranking {
+            font-style: italic;
+            color: #777;
+        }
+
+        #user-rank {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="scoreboard-container">
+        <h1>Scoreboard</h1>
+        <select id="sort-by">
+            <option value="score">Sort by Score</option>
+            <option value="mostStreak">Sort by Most Streak</option>
+        </select>
+
+        <div id="leaderboard">
+            <p class="no-ranking" id="no-ranking" style="display:none;">No ranking</p>
+        </div>
+
+        <div id="user-rank" style="display:none;">
+            <p>Your Rank: <span id="user-rank-text"></span></p>
+        </div>
+
+        <button id="back-to-game">Back to Game</button>
+    </div>
+
+    <script>
+        const sortBySelect = document.getElementById('sort-by');
+        const leaderboardDiv = document.getElementById('leaderboard');
+        const userRankDiv = document.getElementById('user-rank');
+        const userRankTextSpan = document.getElementById('user-rank-text');
+        const noRankingMessage = document.getElementById('no-ranking');
+        const backToGameButton = document.getElementById('back-to-game');
+        let username = localStorage.getItem('username'); // Retrieve username
+
+        backToGameButton.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+
+        sortBySelect.addEventListener('change', () => {
+            fetchLeaderboard(sortBySelect.value);
+        });
+
+        async function fetchLeaderboard(sortBy = 'score') {
+            try {
+                const response = await fetch(`/api/leaderboard?sortBy=${sortBy}&username=${username}`, {
+                    headers: { 'X-Secret-Key': localStorage.getItem('secretKey') }
+                });
+                const data = await response.json();
+
+                leaderboardDiv.innerHTML = '';
+
+                if (data.leaderboard.length === 0) {
+                    noRankingMessage.style.display = 'block';
+                } else {
+                    noRankingMessage.style.display = 'none';
+                    data.leaderboard.forEach((player, index) => {
+                        const row = document.createElement('div');
+                        row.className = 'scoreboard-row';
+                        row.innerHTML = `
+                            <span>${index + 1}. ${player.username}</span>
+                            <span>Score: ${player.score}, Most Streak: ${player.mostStreak}</span>
+                        `;
+                        leaderboardDiv.appendChild(row);
+                    });
+                }
+
+                if (data.userRank && data.userRank > 10) {
+                    userRankDiv.style.display = 'block';
+                    userRankTextSpan.textContent = `Rank ${data.userRank}, Score: ${data.userScore}, Most Streak: ${data.userMostStreak}`;
+
+                    const row = document.createElement('div');
+                    row.className = 'scoreboard-row';
+                    row.innerHTML = `
+                            <span>${data.userRank}. ${username}</span>
+                            <span>Score: ${data.userScore}, Most Streak: ${data.userMostStreak}</span>
+                        `;
+                    leaderboardDiv.appendChild(row);
+
+                } else {
+                    userRankDiv.style.display = 'none';
+                }
+
+
+            } catch (error) {
+                console.error('Error fetching leaderboard:', error);
+                leaderboardDiv.innerHTML = '<p>Error loading leaderboard.</p>';
+            }
+        }
+
+        // Initial load
+        fetchLeaderboard();
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+[
+    {
+        "path": "imgs/1.png",
+        "correct": 0,
+        "choices": [
+            "Mika",
+            "Beach",
+            "Forest",
+            "Cityscape",
+            "Desert",
+            "Waterfall",
+            "Space",
+            "Farm"
+        ]
+    },
+    {
+        "path": "imgs/2.png",
+        "correct": 6,
+        "choices": [
+            "Elephant",
+            "Lion",
+            "Giraffe",
+            "Penguin",
+            "Dolphin",
+            "Panda",
+            "Castorice",
+            "Tiger"
+        ]
+    },
+    {
+        "path": "imgs/3.png",
+        "correct": 2,
+        "choices": [
+            "Elephant",
+            "Lion",
+            "Firefly",
+            "Penguin",
+            "Dolphin",
+            "Panda",
+            "Kangaroo",
+            "Tiger"
+        ]
+    },
+    {
+        "path": "imgs/4.png",
+        "correct": 7,
+        "choices": [
+            "Kingyuan",
+            "Tribble",
+            "Kafka",
+            "Pela",
+            "Qingque",
+            "Jingliu",
+            "Castorice",
+            "Firefly"
+        ]
+    }
+]
