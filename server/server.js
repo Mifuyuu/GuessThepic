@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken'); // Added jwt
+const jwt = require('jsonwebtoken');
 const connectDB = require('./db');
 
 const app = express();
@@ -19,7 +19,7 @@ app.get('/api/port', (req, res) => {
     res.json({ port: process.env.PORT || 5000 });
 });
 
-const secretKey = process.env.JWT_SECRET || 'your_secret_key'; // Replace with a strong, secret key.  Store in .env
+const secretKey = process.env.JWT_SECRET || 'your_secret_key';
 
 // User Schema and Model
 const userSchema = new mongoose.Schema({
@@ -52,7 +52,7 @@ const User = mongoose.model('User', userSchema);
 
 // Score Schema and Model
 const scoreSchema = new mongoose.Schema({
-    username: { type: String, required: true, ref: 'User' }, // Reference the User model
+    username: { type: String, required: true, ref: 'User' },
     score: Number,
     correctStreak: Number,
     mostStreak: Number
@@ -62,7 +62,7 @@ const Score = mongoose.model('Score', scoreSchema);
 // Middleware function to verify JWT
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];  // Bearer <token>
+    const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
         return res.status(401).send('Authentication required.');
@@ -73,8 +73,8 @@ const authenticateToken = (req, res, next) => {
             return res.status(403).send('Invalid token.');
         }
 
-        req.user = user;  // Add user information to the request object
-        next(); // Proceed to the next middleware or route handler
+        req.user = user;
+        next();
     });
 };
 
@@ -84,12 +84,22 @@ app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        // Check if the username already exists
         const existingUser = await User.findOne({ username });
         if (existingUser) {
             return res.status(400).send('Username already exists.');
         }
-
+        if (!username || !password) {
+            return res.status(400).send('Please enter a username and password.');
+        }
+        if (password.length < 8) {
+            return res.status(400).send('Password must be at least 8 characters long.');
+        }
+        if (username.length < 3) {
+            return res.status(400).send('Username must be at least 3 characters long.');
+        }
+        if (username.length > 15) {
+            return res.status(400).send('Username must be at most 20 characters long.');
+        }
         const user = new User({ username, password });
         await user.save();
         res.status(201).send('User registered successfully!');
@@ -114,7 +124,6 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).send('Invalid username or password.');
         }
 
-        // Generate a JWT token
         const token = jwt.sign({ userId: user._id, username: user.username }, secretKey, { expiresIn: '1h' });
 
         res.status(200).json({ message: 'Login successful!', token: token });
@@ -127,46 +136,32 @@ app.post('/api/login', async (req, res) => {
 // Save Score Endpoint (Protected)
 app.post('/api/scores', authenticateToken, async (req, res) => {
     const { score, correctStreak, mostStreak, action } = req.body;
-    const username = req.user.username;  // Get the username from the token
 
     try {
-        const user = await User.findOne({ username });
-        if (!user) {
-            return res.status(404).send('User not found.');
+        const player = await Score.findOne({ username: req.user.username });
+
+        if (!player) {
+            return res.status(404).json({ message: 'Player not found' });
         }
 
-        let player = await Score.findOne({ username: user.username });
-
-        if (player) {
-            // Fetch existing score
-            const existingScore = player.score;
-
-            // Calculate new score based on action
-            let newScore = existingScore;
-            if (action === 'remove') {
-                newScore = Math.max(0, existingScore - score);
-            } else {
-                newScore = existingScore + score;
-            }
-
-            // Delete existing record
-            await Score.deleteOne({ username: user.username });
-
-            // Create new record with updated score
-            player = new Score({ username: user.username, score: newScore, correctStreak, mostStreak });
+        if (action === 'remove') {
+            score -= player.score;
+            if (player.score < 0) player.score = 0;
+        } else {
+            player.score += score;
         }
-        else {
-             if (action === 'remove') {
-                return res.status(400).send('Cannot remove score for non-existent player.');
-            }
-            player = new Score({ username: user.username, score: score, correctStreak, mostStreak });
-        }
+
+        player.correctStreak = correctStreak;
+        player.mostStreak = Math.max(player.mostStreak, mostStreak);
+
         await player.save();
-
-        res.status(200).json({ message: 'Score updated successfully!', newScore: player.score });
+        res.json({ message: 'Score updated', newScore: player.score });
     } catch (error) {
         console.error('Error updating score:', error);
-        res.status(500).send('Error updating score: ' + error.message);
+        console.error("Error object:", error);
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack); 
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
@@ -180,7 +175,7 @@ app.get('/api/player/:username', authenticateToken, async (req, res) => {
             return res.status(404).send('User not found.');
         }
 
-        const player = await Score.findOne({ username: user.username }); // Find score by username
+        const player = await Score.findOne({ username: user.username });
 
         if (player) {
             res.json({ score: player.score, correctStreak: player.correctStreak, mostStreak: player.mostStreak });
@@ -196,7 +191,7 @@ app.get('/api/player/:username', authenticateToken, async (req, res) => {
 // Get Leaderboard Endpoint (Protected)
 app.get('/api/leaderboard', authenticateToken, async (req, res) => {
     const sortBy = req.query.sortBy === 'mostStreak' ? 'mostStreak' : 'score';
-    const username = req.user.username;  // Get the username from the token
+    const username = req.user.username;
     try {
         const leaderboard = await Score.find().sort({ [sortBy]: -1 }).limit(10).lean();
 

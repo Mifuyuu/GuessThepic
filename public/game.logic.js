@@ -1,4 +1,3 @@
-// game.js
 let gameData = {
     randomReveals: 3,
     isActive: false,
@@ -14,7 +13,6 @@ let mostStreak = 0;
 let username = '';
 let serverPort = 5000;
 
-// Element selections
 const signoutBtn = document.getElementById('signout-btn');
 const restartBtn = document.getElementById('restart');
 const viewScoreboardBtn = document.getElementById('view-scoreboard');
@@ -24,12 +22,10 @@ viewScoreboardBtn.addEventListener('click', () => {
     window.location.href = 'scoreboard.html';
 });
 
-
-// Sign Out event listener
 signoutBtn.addEventListener('click', () => {
     localStorage.removeItem('token');
     sessionStorage.removeItem('username');
-    window.location.href = 'index.html'; // Redirect to signin.html
+    window.location.href = 'index.html';
 });
 
 async function fetchServerPort() {
@@ -142,31 +138,19 @@ function handleAnswer(selectedIndex) {
         let roundScore = Math.max(score * scoreMultiplier, 0);
         document.getElementById('status').textContent = `🎉 Correct! +${roundScore.toFixed(2)} Points | Streak: ${correctStreak} | Most Streak: ${mostStreak}`;
         score = roundScore;
-        saveScoreToServer(username, score, correctStreak, mostStreak, 'add');  // Add points
+
     } else {
         correctStreak = 0;
-        score = Math.max(score - 100, 0);
-        document.getElementById('status').textContent = `❌ Wrong! Correct answer: ${currentImage.choices[currentImage.correct]} | -100 Points | Streak: 0 | Most Streak: ${mostStreak}`;
-        saveScoreToServer(username, score, correctStreak, mostStreak, 'remove');  // Remove points
+        score = Math.max(score - 100);
+        document.getElementById('status').textContent = `❌ Wrong! Correct answer: ${currentImage.choices[currentImage.correct]} | ${score} Points | Streak: 0 | Most Streak: ${mostStreak}`;
     }
 
+    saveScoreToServer(username, score, correctStreak, mostStreak);
     revealAllTiles();
     restartBtn.style.display = 'block';
 }
 
-function handleTimeout() {
-    if (!gameData.isActive) return;
-    gameData.isActive = false;
-    score = Math.max(score - 100, 0);
-    correctStreak = 0;
-
-    saveScoreToServer(username, score, correctStreak, mostStreak, 'remove');  // Remove points
-    revealAllTiles();
-    restartBtn.style.display = 'block';
-    document.getElementById('status').textContent = `⏳ Time's up! -100 Points | Correct answer: ${currentImage.choices[currentImage.correct]} | Streak: 0 | Most Streak: ${mostStreak}`;
-}
-
-async function saveScoreToServer(username, score, correctStreak, mostStreak, action = 'add') {
+async function saveScoreToServer(username, score, correctStreak, mostStreak) {
     const token = localStorage.getItem('token');
 
     try {
@@ -180,13 +164,11 @@ async function saveScoreToServer(username, score, correctStreak, mostStreak, act
                 username,
                 score,
                 correctStreak,
-                mostStreak,
-                action: action  // Include the 'action' parameter
+                mostStreak
             })
         });
         if (response.ok) {
-            const data = await response.json();
-            console.log('Score saved to server!', data.newScore);
+            console.log('Score saved to server!');
         } else {
             console.error('Failed to save score:', await response.text());
         }
@@ -214,10 +196,10 @@ function handleTimeout() {
     score = Math.max(score - 100, 0);
     correctStreak = 0;
 
-    saveScoreToServer(username, score, correctStreak, mostStreak, 'remove');
+    saveScoreToServer(username, score, correctStreak, mostStreak);
     revealAllTiles();
     restartBtn.style.display = 'block';
-    document.getElementById('status').textContent = `⏳ Time's up! -100 Points | Correct answer: ${currentImage.choices[currentImage.correct]} | Streak: 0 | Most Streak: ${mostStreak}`;
+    document.getElementById('status').textContent = `⏳ Time's up! ${score} Points | Correct answer: ${currentImage.choices[currentImage.correct]} | Streak: 0 | Most Streak: ${mostStreak}`;
 }
 
 function revealAllTiles() {
