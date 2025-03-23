@@ -78,10 +78,19 @@
         const userRankTextSpan = document.getElementById('user-rank-text');
         const noRankingMessage = document.getElementById('no-ranking');
         const backToGameButton = document.getElementById('back-to-game');
-        let username = localStorage.getItem('username');
+        let username = ''; // Initialize the username variable
+
+        // Retrieve the username from the session storage
+        let this_username = sessionStorage.getItem('username');
+        if (this_username) {
+            username = this_username;
+        }
+        else {
+            window.location.href = 'signin.html'; // Redirect to the login page if the username is not found in sessionStorage
+        }
 
         backToGameButton.addEventListener('click', () => {
-            window.location.href = 'index.html';
+            window.location.href = 'game.html';
         });
 
         sortBySelect.addEventListener('change', () => {
@@ -89,8 +98,13 @@
         });
 
         async function fetchLeaderboard(sortBy = 'score') {
+            const token = localStorage.getItem('token'); // Get token from localStorage
             try {
-                const response = await fetch(`/api/leaderboard?sortBy=${sortBy}&username=${username}`);
+                const response = await fetch(`/api/leaderboard?sortBy=${sortBy}&username=${username}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`  // Include the JWT in the header
+                    }
+                });
                 const data = await response.json();
 
                 leaderboardDiv.innerHTML = '';
@@ -133,7 +147,21 @@
             }
         }
 
-        fetchLeaderboard();
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'index.html';
+            }
+            else {
+                const this_username = sessionStorage.getItem('username');
+                if (!this_username) {
+                    window.location.href = 'index.html';
+                }
+                else {
+                    fetchLeaderboard();
+                }
+            }
+        });
 
     </script>
 </body>

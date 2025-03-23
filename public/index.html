@@ -3,21 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GuessThepic</title>
+    <title>Sign In / Sign Up</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="game-container">
-        <div id="username-container">
-            <input type="text" id="username" placeholder="กรอกชื่อผู้ใช้">
-            <button id="start">เริ่มเกม</button>
-        </div>
-        <div id="status"></div>
-        <div id="game-grid"></div>
-        <div id="choices"></div>
-        <button id="restart" style="display: none;">เริ่มใหม่</button>
-        <button id="view-scoreboard">View Scoreboard</button>
+    <div id="auth-container">
+        <h2>Sign Up</h2>
+        <input type="text" id="signup-username" placeholder="Username">
+        <input type="password" id="signup-password" placeholder="Password">
+        <button id="signup-btn">Sign Up</button>
+
+        <h2>Sign In</h2>
+        <input type="text" id="signin-username" placeholder="Username">
+        <input type="password" id="signin-password" placeholder="Password">
+        <button id="signin-btn">Sign In</button>
+        <div id="auth-message"></div>
     </div>
-    <script src="script.js"></script>
+    <script src="index.logic.js"></script>
 </body>
 </html>

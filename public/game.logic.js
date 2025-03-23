@@ -1,3 +1,4 @@
+// game.js
 let gameData = {
     randomReveals: 3,
     isActive: false,
@@ -9,24 +10,43 @@ let currentImage = null;
 let clicks = 0;
 let score = 100;
 let correctStreak = 0;
-let mostStreak = 0;  // Track the highest streak achieved
+let mostStreak = 0;
 let username = '';
+let serverPort = 5000;
 
-document.getElementById('restart').addEventListener('click', initGame);
-document.getElementById('start').addEventListener('click', function() {
-    const inputUsername = document.getElementById('username').value.trim();
-    if (inputUsername) {
-        username = inputUsername;
-        document.getElementById('username-container').style.display = 'none';
-        initGame();
-    } else {
-        alert('กรุณากรอกชื่อผู้ใช้');
+// Element selections
+const signoutBtn = document.getElementById('signout-btn');
+const restartBtn = document.getElementById('restart');
+const viewScoreboardBtn = document.getElementById('view-scoreboard');
+
+restartBtn.addEventListener('click', initGame);
+viewScoreboardBtn.addEventListener('click', () => {
+    window.location.href = 'scoreboard.html';
+});
+
+
+// Sign Out event listener
+signoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('username');
+    window.location.href = 'index.html'; // Redirect to signin.html
+});
+
+async function fetchServerPort() {
+    try {
+        const response = await fetch('http://localhost:5000/api/port');
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        serverPort = data.port;
+        console.log('Server port:', serverPort);
+    } catch (error) {
+        console.error('Error fetching server port:', error);
     }
-});
+}
 
-document.getElementById('view-scoreboard').addEventListener('click', () => {
-    window.location.href = 'scoreboard.html';  // Redirect to scoreboard
-});
+fetchServerPort();
 
 async function initGame() {
     clicks = 0;
@@ -36,14 +56,13 @@ async function initGame() {
     gameData.isActive = true;
     clearInterval(gameData.timer);
 
-    document.getElementById('restart').style.display = 'none';
+    restartBtn.style.display = 'none';
 
     try {
         const response = await fetch('data.json');
         const images = await response.json();
         currentImage = images[Math.floor(Math.random() * images.length)];
 
-        localStorage.setItem('username', username);
         await fetchPlayerData();
 
         renderGrid();
@@ -56,25 +75,44 @@ async function initGame() {
 }
 
 async function fetchPlayerData() {
+    const token = localStorage.getItem('token');
+
     try {
-        const response = await fetch(`http://localhost:${serverPort}/api/player/${username}`);
+        const this_username = sessionStorage.getItem('username');
+        if (this_username) {
+            username = this_username;
+        }
+        else {
+            window.location.href = 'signin.html'; // Redirect to the login page if the username is not found in sessionStorage
+        }
+
+        const response = await fetch(`http://localhost:${serverPort}/api/player/${username}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
         if (response.ok) {
             const data = await response.json();
-            correctStreak = data.correctStreak; // set global correctStreak variable
+            correctStreak = data.correctStreak;
             mostStreak = data.mostStreak;
-            updateStatus(); // Update UI after fetching the correctStreak
+            updateStatus();
         } else {
             console.error('Failed to fetch player data:', await response.text());
-            correctStreak = 0; // Reset to 0 if fetching fails
+            correctStreak = 0;
             mostStreak = 0;
+            localStorage.removeItem('token');
+            sessionStorage.removeItem('username');
+            window.location.href = 'signin.html';
         }
     } catch (error) {
         console.error('Error fetching player data:', error);
-        correctStreak = 0; // Reset to 0 on error
+        correctStreak = 0;
         mostStreak = 0;
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('username');
+        window.location.href = 'signin.html';
     }
 }
-
 
 function updateStatus() {
     const bonus = gameData.timeLeft >= 20 ? 50 : 0;
@@ -93,56 +131,62 @@ function handleAnswer(selectedIndex) {
 
     let scoreMultiplier = 1;
     if (correctStreak > 1) {
-        scoreMultiplier = 1 + (0.25 * correctStreak);  // 2 streak *1.25, 3 streak *1.5, 4 streak *1.75, etc.
+        scoreMultiplier = 1 + (0.25 * correctStreak);
     }
 
     if (selectedIndex === currentImage.correct) {
         correctStreak++;
         if (correctStreak > mostStreak) {
-            mostStreak = correctStreak;  // Update mostStreak
+            mostStreak = correctStreak;
         }
         let roundScore = Math.max(score * scoreMultiplier, 0);
         document.getElementById('status').textContent = `🎉 Correct! +${roundScore.toFixed(2)} Points | Streak: ${correctStreak} | Most Streak: ${mostStreak}`;
         score = roundScore;
-
+        saveScoreToServer(username, score, correctStreak, mostStreak, 'add');  // Add points
     } else {
         correctStreak = 0;
         score = Math.max(score - 100, 0);
         document.getElementById('status').textContent = `❌ Wrong! Correct answer: ${currentImage.choices[currentImage.correct]} | -100 Points | Streak: 0 | Most Streak: ${mostStreak}`;
+        saveScoreToServer(username, score, correctStreak, mostStreak, 'remove');  // Remove points
     }
 
-    saveScoreToServer(username, score, correctStreak, mostStreak);
     revealAllTiles();
-    document.getElementById('restart').style.display = 'block';
+    restartBtn.style.display = 'block';
 }
 
-let serverPort = 5000;
+function handleTimeout() {
+    if (!gameData.isActive) return;
+    gameData.isActive = false;
+    score = Math.max(score - 100, 0);
+    correctStreak = 0;
 
-async function fetchServerPort() {
-    try {
-        const response = await fetch('http://localhost:5000/api/port');
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        const data = await response.json();
-        serverPort = data.port;
-        console.log('Server port:', serverPort);
-    } catch (error) {
-        console.error('Error fetching server port:', error);
-    }
+    saveScoreToServer(username, score, correctStreak, mostStreak, 'remove');  // Remove points
+    revealAllTiles();
+    restartBtn.style.display = 'block';
+    document.getElementById('status').textContent = `⏳ Time's up! -100 Points | Correct answer: ${currentImage.choices[currentImage.correct]} | Streak: 0 | Most Streak: ${mostStreak}`;
 }
 
-fetchServerPort();
+async function saveScoreToServer(username, score, correctStreak, mostStreak, action = 'add') {
+    const token = localStorage.getItem('token');
 
-async function saveScoreToServer(username, score, correctStreak, mostStreak) {
     try {
         const response = await fetch(`http://localhost:${serverPort}/api/scores`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, score, correctStreak, mostStreak })
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                username,
+                score,
+                correctStreak,
+                mostStreak,
+                action: action  // Include the 'action' parameter
+            })
         });
         if (response.ok) {
-            console.log('Score saved to server!');
+            const data = await response.json();
+            console.log('Score saved to server!', data.newScore);
         } else {
             console.error('Failed to save score:', await response.text());
         }
@@ -168,11 +212,11 @@ function handleTimeout() {
     if (!gameData.isActive) return;
     gameData.isActive = false;
     score = Math.max(score - 100, 0);
-    correctStreak = 0; // Reset the streak on timeout
+    correctStreak = 0;
 
-    saveScoreToServer(username, score, correctStreak, mostStreak);  //Save to db
+    saveScoreToServer(username, score, correctStreak, mostStreak, 'remove');
     revealAllTiles();
-    document.getElementById('restart').style.display = 'block';
+    restartBtn.style.display = 'block';
     document.getElementById('status').textContent = `⏳ Time's up! -100 Points | Correct answer: ${currentImage.choices[currentImage.correct]} | Streak: 0 | Most Streak: ${mostStreak}`;
 }
 
@@ -257,3 +301,20 @@ function handleRandomReveal() {
         }
     }
 }
+
+window.addEventListener('load', () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'index.html';
+    }
+    else {
+        const this_username = sessionStorage.getItem('username');
+        if (!this_username) {
+            window.location.href = 'index.html';
+        }
+        else {
+            fetchServerPort();
+            initGame();
+        }
+    }
+});
