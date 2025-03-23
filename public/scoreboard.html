@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scoreboard</title>
-    <link rel="stylesheet" href="style.css">  <!-- Use your existing style.css -->
+    <link rel="stylesheet" href="style.css">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -78,10 +78,10 @@
         const userRankTextSpan = document.getElementById('user-rank-text');
         const noRankingMessage = document.getElementById('no-ranking');
         const backToGameButton = document.getElementById('back-to-game');
-        let username = localStorage.getItem('username'); // Retrieve username
+        let username = localStorage.getItem('username');
 
         backToGameButton.addEventListener('click', () => {
-            window.location.href = 'index.html'; // Redirect to the game
+            window.location.href = 'index.html';
         });
 
         sortBySelect.addEventListener('change', () => {
@@ -93,7 +93,7 @@
                 const response = await fetch(`/api/leaderboard?sortBy=${sortBy}&username=${username}`);
                 const data = await response.json();
 
-                leaderboardDiv.innerHTML = ''; // Clear existing leaderboard
+                leaderboardDiv.innerHTML = '';
 
                 if (data.leaderboard.length === 0) {
                     noRankingMessage.style.display = 'block';
@@ -133,7 +133,6 @@
             }
         }
 
-        // Initial load
         fetchLeaderboard();
 
     </script>
