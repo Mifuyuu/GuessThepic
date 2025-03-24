@@ -1,6 +1,6 @@
 // signin.js
 
-let serverPort = 5000;
+let serverPort = 3000;
 
 // Element selections
 const signupUsernameInput = document.getElementById('signup-username');
@@ -13,7 +13,7 @@ const authMessageDiv = document.getElementById('auth-message');
 
 async function fetchServerPort() {
     try {
-        const response = await fetch('http://localhost:5000/api/port');
+        const response = await fetch('http://localhost:3000/api/port');
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
@@ -89,7 +89,7 @@ signinBtn.addEventListener('click', async () => {
             localStorage.setItem('token', token);
             sessionStorage.setItem('username', signinUsername);
             authMessageDiv.textContent = 'Sign in successful! Redirecting to game...';
-            window.location.href = 'game.html'; // Redirect to game.html
+            window.location.href = 'game.html';
         } else {
             const errorMessage = await response.text();
             authMessageDiv.textContent = errorMessage || 'Sign in failed.';

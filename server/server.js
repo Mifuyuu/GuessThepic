@@ -16,7 +16,7 @@ connectDB();
 app.use(express.static(path.join(__dirname, '../public')));
 
 app.get('/api/port', (req, res) => {
-    res.json({ port: process.env.PORT || 5000 });
+    res.json({ port: process.env.PORT || 3000 });
 });
 
 const secretKey = process.env.JWT_SECRET || 'your_secret_key';
@@ -217,7 +217,7 @@ app.get('/api/leaderboard', authenticateToken, async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });

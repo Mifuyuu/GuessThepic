@@ -11,7 +11,7 @@ let score = 100;
 let correctStreak = 0;
 let mostStreak = 0;
 let username = '';
-let serverPort = 5000;
+let serverPort = 3000;
 
 const signoutBtn = document.getElementById('signout-btn');
 const restartBtn = document.getElementById('restart');
@@ -30,7 +30,7 @@ signoutBtn.addEventListener('click', () => {
 
 async function fetchServerPort() {
     try {
-        const response = await fetch('http://localhost:5000/api/port');
+        const response = await fetch('http://localhost:3000/api/port');
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
@@ -79,7 +79,7 @@ async function fetchPlayerData() {
             username = this_username;
         }
         else {
-            window.location.href = 'signin.html'; // Redirect to the login page if the username is not found in sessionStorage
+            window.location.href = 'index.html';
         }
 
         const response = await fetch(`http://localhost:${serverPort}/api/player/${username}`, {
@@ -98,7 +98,7 @@ async function fetchPlayerData() {
             mostStreak = 0;
             localStorage.removeItem('token');
             sessionStorage.removeItem('username');
-            window.location.href = 'signin.html';
+            window.location.href = 'index.html';
         }
     } catch (error) {
         console.error('Error fetching player data:', error);
@@ -106,7 +106,7 @@ async function fetchPlayerData() {
         mostStreak = 0;
         localStorage.removeItem('token');
         sessionStorage.removeItem('username');
-        window.location.href = 'signin.html';
+        window.location.href = 'index.html';
     }
 }
 

@@ -98,11 +98,11 @@
         });
 
         async function fetchLeaderboard(sortBy = 'score') {
-            const token = localStorage.getItem('token'); // Get token from localStorage
+            const token = localStorage.getItem('token');
             try {
                 const response = await fetch(`/api/leaderboard?sortBy=${sortBy}&username=${username}`, {
                     headers: {
-                        'Authorization': `Bearer ${token}`  // Include the JWT in the header
+                        'Authorization': `Bearer ${token}`
                     }
                 });
                 const data = await response.json();
