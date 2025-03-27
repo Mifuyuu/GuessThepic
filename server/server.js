@@ -135,33 +135,54 @@ app.post('/api/login', async (req, res) => {
 
 // Save Score Endpoint (Protected)
 app.post('/api/scores', authenticateToken, async (req, res) => {
-    const { score, correctStreak, mostStreak, action } = req.body;
+    // ไม่จำเป็นต้องรับ username จาก body เพราะเราได้จาก token ที่ verify แล้ว
+    const { score, correctStreak, mostStreak } = req.body;
+    const username = req.user.username; // ใช้ username จาก token
+
+    // ตรวจสอบว่าค่าที่จำเป็นมีครบ
+    if (score === undefined || correctStreak === undefined || mostStreak === undefined) {
+        return res.status(400).json({ message: 'Missing score data (score, correctStreak, mostStreak required).' });
+    }
 
     try {
-        const player = await Score.findOne({ username: req.user.username });
+        // ใช้ findOneAndUpdate พร้อม upsert: true
+        // ถ้าเจอ document ที่ username ตรงกัน จะ update
+        // ถ้าไม่เจอ จะสร้าง document ใหม่ตามเงื่อนไขใน $setOnInsert
+        const updatedPlayer = await Score.findOneAndUpdate(
+            { username: username }, // เงื่อนไขการค้นหา
+            {
+                $inc: { score: score }, // เพิ่มค่า score เข้าไป (ระวังถ้าต้องการ logic แบบอื่น)
+                $set: { correctStreak: correctStreak }, // ตั้งค่า streak ปัจจุบัน
+                $max: { mostStreak: mostStreak }, // ตั้งค่า mostStreak เป็นค่าสูงสุดระหว่างค่าเดิมกับค่าใหม่
+                $setOnInsert: { username: username } // ตั้งค่า username กรณีเป็นการสร้างใหม่ (upsert)
+            },
+            {
+                new: true, // คืนค่า document ที่ update แล้ว
+                upsert: true // สร้างใหม่ถ้าไม่เจอ
+            }
+        );
 
-        if (!player) {
-            return res.status(404).json({ message: 'Player not found' });
+        if (!updatedPlayer) {
+             // กรณีนี้ไม่ควรเกิดถ้า upsert: true ทำงานถูกต้อง แต่อาจใส่ไว้เผื่อกรณีแปลกๆ
+             console.error('Failed to update or insert score for user:', username);
+             return res.status(500).json({ message: 'Server error during score update/insert' });
         }
 
-        if (action === 'remove') {
-            score -= player.score;
-            if (player.score < 0) player.score = 0;
-        } else {
-            player.score += score;
-        }
+        // ส่งข้อมูลคะแนนล่าสุดกลับไป (อาจจะไม่จำเป็นเสมอไป)
+        res.json({
+            message: 'Score updated successfully',
+            newScore: updatedPlayer.score,
+            correctStreak: updatedPlayer.correctStreak,
+            mostStreak: updatedPlayer.mostStreak
+        });
 
-        player.correctStreak = correctStreak;
-        player.mostStreak = Math.max(player.mostStreak, mostStreak);
-
-        await player.save();
-        res.json({ message: 'Score updated', newScore: player.score });
     } catch (error) {
-        console.error('Error updating score:', error);
+        console.error(`Error updating score for user ${username}:`, error);
+        // เพิ่มรายละเอียด error ใน log
         console.error("Error object:", error);
         console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack); 
-        res.status(500).json({ message: 'Server error' });
+        console.error("Error stack:", error.stack);
+        res.status(500).json({ message: 'Server error while updating score' });
     }
 });
 

@@ -4,52 +4,139 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scoreboard</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
             display: flex;
             justify-content: center;
             align-items: center;
+            flex-direction: column;
+            gap: 40px;
+            background-color: #f1f2f296;
             height: 100vh;
-            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         #scoreboard-container {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 80%;
-            max-width: 800px;
+            width: 500px;
             text-align: center;
         }
 
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
         #sort-by {
-            margin-bottom: 10px;
+            margin-bottom: 20px;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 1rem;
+        }
+
+        #leaderboard {
+            position: relative;
+            height: 500px;
+            width: 100%;
+        }
+
+        :root {
+            --team-height: 60px;
+            --team-spacing: 10px;
         }
 
         .scoreboard-row {
+            position: absolute;
+            width: 90%;
+            height: var(--team-height);
+            background: var(--color);
+            box-shadow: 0 3px 5px #0000001f;
+            left: 50%;
+            transform: translateX(-50%);
+            top: calc(var(--i) * (var(--team-height) + var(--team-spacing)));
             display: flex;
-            justify-content: space-between;
-            padding: 10px;
-            border-bottom: 1px solid #eee;
+            align-items: center;
+            transition-property: top;
+            transition-duration: 500ms;
+            border-radius: 10px;
+            transition-timing-function: cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
 
-        .scoreboard-row:last-child {
-            border-bottom: none;
+        .scoreboard-row span:first-child {
+            width: 80%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            font-size: 1.1rem;
+            color: #fff;
+            font-weight: 600;
+            text-transform: capitalize;
+            padding-left: 20px;
+        }
+
+        .scoreboard-row span:last-child {
+            width: var(--team-height);
+            margin: 20px 0;
+            font-size: 1.4rem;
+            color: #fff;
+            font-weight: 600;
+            padding-right: 20px;
         }
 
         .no-ranking {
             font-style: italic;
             color: #777;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
 
         #user-rank {
             margin-top: 20px;
             font-weight: bold;
+            background-color: #5c6bc0;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
         }
+
+        #back-to-game {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #42a5f5;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+
+        #back-to-game:hover {
+            background-color: #1e88e5;
+        }
+
+        /* Color variations for different ranks */
+        .rank-1 { --color: #ffd700; }
+        .rank-2 { --color: #c0c0c0; }
+        .rank-3 { --color: #cd7f32; }
+        .rank-4 { --color: #66bb6a; }
+        .rank-5 { --color: #42a5f5; }
+        .rank-6 { --color: #ffa726; }
+        .rank-7 { --color: #ef5350; }
+        .rank-8 { --color: #5c6bc0; }
+        .rank-9 { --color: #a1887f; }
+        .rank-10 { --color: #26c6da; }
+        .user-rank { --color: #7e57c2; }
     </style>
 </head>
 <body>
@@ -113,37 +200,48 @@
                     noRankingMessage.style.display = 'block';
                 } else {
                     noRankingMessage.style.display = 'none';
+                    
+                    // Display top 10 players
                     data.leaderboard.forEach((player, index) => {
                         const row = document.createElement('div');
-                        row.className = 'scoreboard-row';
+                        row.className = `scoreboard-row rank-${index + 1}`;
+                        row.style.setProperty('--i', index);
+                        
+                        // Choose what to display based on sortBy
+                        const value = sortBy === 'score' ? player.score : player.mostStreak;
+                        const label = sortBy === 'score' ? 'Score' : 'Streak';
+                        
                         row.innerHTML = `
                             <span>${index + 1}. ${player.username}</span>
-                            <span>Score: ${player.score}, Most Streak: ${player.mostStreak}</span>
+                            <span>${value}</span>
                         `;
                         leaderboardDiv.appendChild(row);
                     });
-                }
 
-                if (data.userRank && data.userRank > 10) {
-                    userRankDiv.style.display = 'block';
-                    userRankTextSpan.textContent = `Rank ${data.userRank}, Score: ${data.userScore}, Most Streak: ${data.userMostStreak}`;
+                    // Add user if not in top 10
+                    if (data.userRank && data.userRank > 10) {
+                        userRankDiv.style.display = 'block';
+                        const userValue = sortBy === 'score' ? data.userScore : data.userMostStreak;
+                        userRankTextSpan.textContent = `Rank ${data.userRank}, ${sortBy === 'score' ? 'Score' : 'Streak'}: ${userValue}`;
 
-                    const row = document.createElement('div');
-                        row.className = 'scoreboard-row';
+                        const row = document.createElement('div');
+                        row.className = 'scoreboard-row user-rank';
+                        row.style.setProperty('--i', 10); // Place below top 10
+                        
+                        const userValueDisplay = sortBy === 'score' ? data.userScore : data.userMostStreak;
                         row.innerHTML = `
                             <span>${data.userRank}. ${username}</span>
-                            <span>Score: ${data.userScore}, Most Streak: ${data.userMostStreak}</span>
+                            <span>${userValueDisplay}</span>
                         `;
                         leaderboardDiv.appendChild(row);
-
-                } else {
-                    userRankDiv.style.display = 'none';
+                    } else {
+                        userRankDiv.style.display = 'none';
+                    }
                 }
-
 
             } catch (error) {
                 console.error('Error fetching leaderboard:', error);
-                leaderboardDiv.innerHTML = '<p>Error loading leaderboard.</p>';
+                leaderboardDiv.innerHTML = '<p class="no-ranking">Error loading leaderboard.</p>';
             }
         }
 
@@ -162,7 +260,6 @@
                 }
             }
         });
-
     </script>
 </body>
 </html>

@@ -30,7 +30,7 @@ signoutBtn.addEventListener('click', () => {
 
 async function fetchServerPort() {
     try {
-        const response = await fetch('http://localhost:3000/api/port');
+        const response = await fetch(`http://localhost:3000/api/port`);
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
@@ -152,28 +152,46 @@ function handleAnswer(selectedIndex) {
 
 async function saveScoreToServer(username, score, correctStreak, mostStreak) {
     const token = localStorage.getItem('token');
+    console.log('Attempting to save score...'); // เพิ่มบรรทัดนี้
+    console.log('Username:', username);         // เพิ่มบรรทัดนี้
+    console.log('Score:', score);               // เพิ่มบรรทัดนี้
+    console.log('Correct Streak:', correctStreak); // เพิ่มบรรทัดนี้
+    console.log('Most Streak:', mostStreak);     // เพิ่มบรรทัดนี้
+    console.log('Token:', token);               // เพิ่มบรรทัดนี้
+
+    if (!token) {
+        console.error('No token found! Cannot save score.'); // เพิ่มบรรทัดนี้
+        return; // หยุดการทำงานถ้าไม่มี token
+    }
 
     try {
         const response = await fetch(`http://localhost:${serverPort}/api/scores`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}` // ตรวจสอบว่าใส่ Bearer ถูกต้อง
             },
             body: JSON.stringify({
-                username,
+                username, // server.js ไม่ได้ใช้ username จาก body โดยตรง แต่ใช้จาก token แทน
                 score,
                 correctStreak,
                 mostStreak
+                // action ไม่ได้ถูกส่งไปในปัจจุบัน อาจจะไม่จำเป็น? หรือลืมใส่?
             })
         });
+
+        // เพิ่มการตรวจสอบ response
+        console.log('Save score response status:', response.status); // เพิ่มบรรทัดนี้
+        const responseData = await response.json(); // ลองอ่าน response body ไม่ว่าสำเร็จหรือไม่
+        console.log('Save score response data:', responseData); // เพิ่มบรรทัดนี้
+
         if (response.ok) {
             console.log('Score saved to server!');
         } else {
-            console.error('Failed to save score:', await response.text());
+            console.error('Failed to save score:', responseData.message || response.statusText); // แสดง message จาก server ถ้ามี
         }
     } catch (error) {
-        console.error('Error saving score:', error);
+        console.error('Error saving score (fetch failed):', error);
     }
 }
 
