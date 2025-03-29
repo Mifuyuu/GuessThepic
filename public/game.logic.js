@@ -298,70 +298,95 @@ function revealAllTiles() {
     });
 }
 
-function renderGrid() {
+async function renderGrid() { // ทำให้เป็น async ถ้าจะ await getComputedStyle (แต่จริงๆ ไม่จำเป็นต้อง await)
     const grid = document.getElementById('game-grid');
-    grid.innerHTML = ''; // เคลียร์ grid เก่าก่อน
-    // ไม่ต้องตั้ง background ที่ grid container แล้ว เพราะจะตั้งที่ .tile-img แทน
-    grid.style.backgroundImage = '';
+    grid.innerHTML = ''; // Clear previous grid
+    grid.style.backgroundImage = ''; // Ensure grid container itself has no background image
 
-    // เพิ่มการตรวจสอบว่า currentImage โหลดมาหรือยัง
     if (!currentImage || !currentImage.path) {
         console.error("Cannot render grid: currentImage data is missing.");
-        grid.textContent = "Error loading image data."; // แสดงข้อความใน grid
+        grid.textContent = "Error loading image data.";
         return;
     }
 
-    for (let i = 0; i < 25; i++) {
-        // 1. สร้าง .tile container หลัก
+    // --- Get Computed Styles (ทำนอก loop เพื่อประสิทธิภาพ) ---
+    let tileWidth = 100; // Default
+    let tileHeight = 100; // Default
+    let gap = 10; // Default
+    let borderWidth = 2; // Default
+
+    // สร้าง tile ชั่วคราวเพื่อวัดค่า (หรือวัดจาก grid ถ้ามั่นใจว่ามี style ถูกต้อง)
+    const tempTile = document.createElement('div');
+    tempTile.className = 'tile'; // ให้มี class เหมือน tile จริง
+    tempTile.style.visibility = 'hidden'; // ซ่อนไว้
+    grid.appendChild(tempTile); // ต้องอยู่ใน DOM ถึงจะ getComputedStyle ได้
+
+    try {
+        const tileStyle = window.getComputedStyle(tempTile);
+        // parseFloat จะตัด 'px' ออกและแปลงเป็นตัวเลข
+        tileWidth = parseFloat(tileStyle.width) || tileWidth;
+        tileHeight = parseFloat(tileStyle.height) || tileHeight;
+        borderWidth = parseFloat(tileStyle.borderLeftWidth) || borderWidth; // เอา border ด้านเดียวพอ
+
+        const gridStyle = window.getComputedStyle(grid);
+        gap = parseFloat(gridStyle.gap) || gap; // gap อาจจะเป็นค่าเดียว หรือ 'row-gap column-gap'
+
+        // Handle cases where gap might return two values
+        const gapValues = gridStyle.gap.split(' ');
+        gap = parseFloat(gapValues[0]) || gap; // Use the first value (row-gap usually) or fallback
+
+    } catch (e) {
+        console.warn("Could not compute styles, using default values.", e);
+    } finally {
+        grid.removeChild(tempTile); // ลบ tile ชั่วคราวทิ้ง
+    }
+
+    // --- คำนวณค่าที่ต้องใช้ ---
+    const numCols = 5; // หรืออ่านจาก grid-template-columns ถ้าซับซ้อน
+    const numRows = 5;
+    // สำคัญ: ตรวจสอบ box-sizing ถ้าเป็น border-box การคำนวณ borderWidth จะต่างไป
+    // สมมติว่าเป็น content-box (default):
+    const actualTileWidth = tileWidth + 2 * borderWidth;
+    const actualTileHeight = tileHeight + 2 * borderWidth;
+    const horizontalStep = actualTileWidth + gap;
+    const verticalStep = actualTileHeight + gap;
+
+    // ขนาดรวมของ Background Image ที่ต้องใช้
+    const totalBgWidth = (numCols * actualTileWidth) + ((numCols - 1) * gap);
+    const totalBgHeight = (numRows * actualTileHeight) + ((numRows - 1) * gap);
+    const backgroundSize = `${totalBgWidth}px ${totalBgHeight}px`;
+
+    console.log(`Computed Grid Params: Tile(${tileWidth}x${tileHeight}), Border(${borderWidth}), Gap(${gap})`);
+    console.log(`Steps: H=${horizontalStep}, V=${verticalStep}. BG Size: ${backgroundSize}`);
+
+
+    // --- สร้าง Tiles ---
+    for (let i = 0; i < numCols * numRows; i++) {
         const tile = document.createElement('div');
-        tile.className = 'tile'; // ใช้ style จาก .tile (ขนาด, border, position: relative)
+        tile.className = 'tile';
 
-        // 2. สร้าง .tile-img สำหรับแสดงส่วนของภาพ
         const imgDiv = document.createElement('div');
-        imgDiv.className = 'tile-img'; // ใช้ style จาก .tile-img (width/height 100%)
-        imgDiv.style.backgroundImage = `url('${currentImage.path}')`; // ตั้ง background image
-        // imgDiv.style.backgroundSize = '500px 500px'; // CSS ควรกำหนดไว้แล้ว แต่ใส่ตรงนี้เพื่อความชัวร์ก็ได้
+        imgDiv.className = 'tile-img';
+        imgDiv.style.backgroundImage = `url('${currentImage.path}')`;
+        imgDiv.style.backgroundSize = backgroundSize; // *** ใช้ขนาดที่คำนวณได้ ***
 
-        // *** คำนวณและตั้งค่า background-position ***
-        const row = Math.floor(i / 5); // แถว (0-4)
-        const col = i % 5;             // คอลัมน์ (0-4)
-        const backgroundPosX = -col * 100; // เลื่อนภาพไปทางซ้าย (ค่าลบ) ตามคอลัมน์
-        const backgroundPosY = -row * 100; // เลื่อนภาพขึ้นข้างบน (ค่าลบ) ตามแถว
+        const row = Math.floor(i / numCols);
+        const col = i % numCols;
+
+        // *** คำนวณ Background Position ที่ถูกต้อง ***
+        const backgroundPosX = -col * horizontalStep;
+        const backgroundPosY = -row * verticalStep;
         imgDiv.style.backgroundPosition = `${backgroundPosX}px ${backgroundPosY}px`;
-        // *** สิ้นสุดการคำนวณ ***
 
-        // 3. สร้าง .tile-cover ตัวปิดทับ
         const cover = document.createElement('div');
-        cover.className = 'tile-cover'; // ใช้ style จาก .tile-cover (absolute, background-color)
-        // เพิ่ม event listener ให้กับ cover (เมื่อคลิก cover จะหายไป)
+        cover.className = 'tile-cover';
         cover.addEventListener('click', () => handleTileClick(cover));
 
-        // 4. เอา .tile-img และ .tile-cover ใส่เข้าไปใน .tile
         tile.appendChild(imgDiv);
         tile.appendChild(cover);
-
-        // 5. เอา .tile ที่สมบูรณ์แล้ว ใส่เข้าไปใน #game-grid
         grid.appendChild(tile);
     }
 }
-
-// ฟังก์ชัน handleTileClick (ควรมีอยู่แล้ว ถ้าไม่มีให้เพิ่ม)
-// ทำหน้าที่เมื่อมีการคลิกที่ cover ของ tile
-function handleTileClick(coverElement) {
-    // ตรวจสอบว่าเกมกำลังเล่นอยู่ และ cover นั้นยังไม่ถูกเปิด
-    if (!gameData.isActive || !coverElement || coverElement.style.opacity === '0') {
-        return;
-    }
-
-    coverElement.style.opacity = '0'; // ทำให้ cover โปร่งใส (เหมือนเปิด tile)
-
-    // เพิ่มจำนวนคลิกและลดคะแนน (ตาม logic เดิม)
-    clicks++;
-    // ปรับ logic การลดคะแนนตามต้องการ เช่น ลด 5 แต้มต่อคลิก
-    score = Math.max(score - 5, 0);
-    updateStatus(); // อัปเดตการแสดงผล score/clicks
-}
-
 
 function renderChoices() {
     choicesDiv.innerHTML = ''; // Clear previous choices
