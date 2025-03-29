@@ -3,16 +3,15 @@ let gameData = {
     isActive: false,
     timer: null,
     timeLeft: 30,
-    startTime: null // เพิ่มเพื่อคำนวณ bonus time
+    startTime: null
 };
 
 let currentImage = null;
 let clicks = 0;
-let score = 100; // Reset ใน initGame
+let score = 100;
 let correctStreak = 0;
 let mostStreak = 0;
 let username = '';
-// let serverPort = 3000; // --- ไม่ต้องใช้แล้ว ---
 
 const statusDiv = document.getElementById('status');
 const gameGridDiv = document.getElementById('game-grid');
@@ -20,11 +19,6 @@ const choicesDiv = document.getElementById('choices');
 const signoutBtn = document.getElementById('signout-btn');
 const restartBtn = document.getElementById('restart');
 const viewScoreboardBtn = document.getElementById('view-scoreboard');
-
-// --- ลบฟังก์ชัน fetchServerPort และการเรียกใช้ ---
-// async function fetchServerPort() { ... }
-// fetchServerPort(); // ลบการเรียกใน Event Listener 'load' ด้วย
-// --- สิ้นสุดการลบ ---
 
 // --- Event Listeners ---
 restartBtn.addEventListener('click', initGame);

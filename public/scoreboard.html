@@ -73,7 +73,7 @@
             height: calc((var(--team-height, 55px) + var(--team-spacing, 8px)) * 10 + 55px); /* Adjust height based on row height/spacing + maybe one extra for user */
             width: 100%;
             margin-bottom: 20px;
-            overflow: hidden; /* Clip rows animating outside */
+            /* overflow: hidden; */
         }
 
         /* --- Individual Scoreboard Row --- */
@@ -238,9 +238,10 @@
         const backToGameButton = document.getElementById('back-to-game');
 
         // --- State Variables ---
-        let playerElements = new Map(); // Map: username -> { element: HTMLElement, data: Object }
+        let playerElements = new Map(); // Map: username -> { element: HTMLElement, data: Object, currentRank: number }
         let currentUsername = sessionStorage.getItem('username');
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token'); // Assuming you are back to using localStorage for token
+        let isFetchingLeaderboard = false; // Flag to prevent race conditions
 
         // --- Socket.IO Client Setup ---
         const socket = io({ /* auth: { token: token } // Optional: Add if server verifies sockets */ });
@@ -250,8 +251,9 @@
         });
 
         socket.on('scoreUpdated', () => {
-            console.log('Received "scoreUpdated" event. Fetching leaderboard...');
-            fetchLeaderboard(sortBySelect.value); // Fetch using current sort order
+            console.log('Received "scoreUpdated" event.');
+            // *** เรียกใช้ fetch แบบมีตัวป้องกัน ***
+            requestLeaderboardUpdate();
         });
 
         socket.on('disconnect', (reason) => {
@@ -280,9 +282,48 @@
             if (rank === 1) return "1st";
             if (rank === 2) return "2nd";
             if (rank === 3) return "3rd";
-            return `${rank}th`;
+            // Add specific handling for 11th, 12th, 13th if needed, otherwise 'th' is generally ok
+            const lastDigit = rank % 10;
+            const lastTwoDigits = rank % 100;
+            if (lastTwoDigits >= 11 && lastTwoDigits <= 13) {
+                return `${rank}th`;
+            }
+            switch (lastDigit) {
+                case 1: return `${rank}st`;
+                case 2: return `${rank}nd`;
+                case 3: return `${rank}rd`;
+                default: return `${rank}th`;
+            }
+        }
+
+        // Helper Function to Clear Data and Redirect (if using localStorage token)
+        function clearAuthDataAndRedirect() {
+            localStorage.removeItem('token');
+            sessionStorage.removeItem('username');
+            window.location.href = 'index.html';
         }
         // --- End Helper Functions ---
+
+        // --- Function to request update (with debounce/guard) ---
+        function requestLeaderboardUpdate() {
+            if (isFetchingLeaderboard) {
+                console.log("Already fetching leaderboard, skipping duplicate request.");
+                return; // If already fetching, do nothing
+            }
+            // Set flag immediately before calling fetch
+            isFetchingLeaderboard = true;
+            fetchLeaderboard(sortBySelect.value)
+              .catch(err => {
+                  // Log errors that bubble up from fetchLeaderboard
+                  console.error("Error caught after fetchLeaderboard finished:", err);
+              })
+              .finally(() => {
+                  // *** Clear Flag when Fetch is completely done (success or fail) ***
+                  isFetchingLeaderboard = false;
+                  console.log("Fetch process complete, flag reset.");
+              });
+        }
+
 
         // --- Event Listeners ---
         backToGameButton.addEventListener('click', () => {
@@ -290,54 +331,61 @@
         });
 
         sortBySelect.addEventListener('change', () => {
-            // Clear existing elements immediately for visual feedback before fetch completes
-             // leaderboardDiv.innerHTML = ''; // Avoid this to keep transitions smooth
-             // playerElements.clear(); // Clear the map if you prefer a full rebuild on sort change
-            fetchLeaderboard(sortBySelect.value);
+            console.log(`Sort changed to: ${sortBySelect.value}`);
+            // When sort changes, request a new fetch
+            requestLeaderboardUpdate();
         });
         // --- End Event Listeners ---
 
         // --- Core Function: Fetch and Update Leaderboard ---
         async function fetchLeaderboard(sortBy = 'score') {
-            if (!token || !currentUsername) {
-                console.error('Auth missing. Redirecting.');
-                window.location.href = 'index.html';
-                return;
+            console.log(`Attempting to fetch leaderboard with sortBy = "${sortBy}"`);
+
+            // Re-check auth state just before fetching
+            currentUsername = sessionStorage.getItem('username'); // Get latest username
+            const currentToken = localStorage.getItem('token'); // Get latest token
+
+            if (!currentToken || !currentUsername) {
+                console.error('Auth missing before fetch. Redirecting.');
+                clearAuthDataAndRedirect(); // Use helper to clear and redirect
+                throw new Error("Authentication missing"); // Throw error to stop execution here
             }
 
             setStatusMessage('Loading leaderboard...', 'info');
 
+            // NOTE: The try/catch block handles errors within the async function.
+            // The .catch().finally() in requestLeaderboardUpdate handles errors *after* this function resolves/rejects.
             try {
                 const response = await fetch(`/api/leaderboard?sortBy=${sortBy}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                     headers: { 'Authorization': `Bearer ${currentToken}` } // Use currentToken
+                 });
+
+                 // Handle Auth errors first
+                 if (response.status === 401 || response.status === 403) {
+                      const responseText = await response.text();
+                      console.error(`Authentication Error (${response.status}) fetching leaderboard: ${responseText}. Redirecting...`);
+                      clearAuthDataAndRedirect(); // Use helper
+                      throw new Error("Authentication failed"); // Throw to stop execution
+                 }
 
                 if (!response.ok) {
-                    if (response.status === 401 || response.status === 403) {
-                         console.error('Authentication error (401/403). Redirecting...');
-                         localStorage.removeItem('token');
-                         sessionStorage.removeItem('username');
-                         setStatusMessage('Authentication failed. Please log in again.', 'error');
-                         setTimeout(() => window.location.href = 'index.html', 3000);
-                    } else {
-                         setStatusMessage(`Error loading leaderboard: ${response.status} ${response.statusText}`, 'error');
-                    }
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                     setStatusMessage(`Error loading leaderboard: ${response.status} ${response.statusText}`, 'error');
+                     throw new Error(`HTTP error! status: ${response.status}`);
+                 }
 
                 const data = await response.json();
                 statusMessage.style.display = 'none'; // Hide loading message
-                 leaderboardDiv.querySelectorAll('.scoreboard-row').forEach(el => el.style.opacity = '1'); // Ensure rows are visible again
-
+                leaderboardDiv.querySelectorAll('.scoreboard-row').forEach(el => el.style.opacity = '1'); // Ensure rows are visible again
 
                 if (!data || !Array.isArray(data.leaderboard)) {
-                    console.error("Invalid data format:", data);
+                    console.error("Invalid data format received:", data);
                     setStatusMessage("Failed to process leaderboard data.", 'error');
-                    return;
+                    throw new Error("Invalid data format"); // Throw to stop execution
                 }
 
-                // --- DOM Update Logic with Animation ---
-                const newLeaderboardData = data.leaderboard; // Top 10 (or less)
+                // --- DOM Update Logic ---
+                console.log("Received new leaderboard data:", data); // Log the whole data object received
+                const newLeaderboardData = data.leaderboard;
                 const currentUserRankData = {
                      rank: data.userRank,
                      score: data.userScore,
@@ -345,102 +393,102 @@
                 };
 
                 const newUsernamesInTop = new Set(newLeaderboardData.map(p => p.username));
-                const nextPlayerElements = new Map(); // Build the next state map
+                const nextPlayerElements = new Map();
 
-                // 1. Update or Create elements for the Top list
+                // 1. Update or Create elements
                 newLeaderboardData.forEach((playerData, index) => {
                     const username = playerData.username || 'Unknown';
+                    // *** Ensure value calculation uses the current sortBy parameter ***
                     const value = sortBy === 'score' ? (playerData.score ?? 0) : (playerData.mostStreak ?? 0);
                     const rank = index + 1;
+                    console.log(`Processing Rank ${rank}: ${username} - Value to display (${sortBy}): ${value}`);
 
                     let existingEntry = playerElements.get(username);
                     let playerDiv;
+                    
 
                     if (existingEntry) {
                         // --- UPDATE EXISTING ---
                         playerDiv = existingEntry.element;
+                        console.log(` -> Found existing element for ${username}.`);
 
-                        // Update displayed data only if changed (optional optimization)
-                        if (existingEntry.data.score !== playerData.score || existingEntry.data.mostStreak !== playerData.mostStreak || existingEntry.currentRank !== rank) {
-                             const nameSpan = playerDiv.querySelector('span:first-child');
-                             const valueSpan = playerDiv.querySelector('span:last-child');
-                             if (nameSpan) nameSpan.textContent = `${rank}. ${username}`;
-                             if (valueSpan) valueSpan.textContent = value;
-                        }
+                        // *** Force Update Text Content ***
+                        const nameSpan = playerDiv.querySelector('span:first-child');
+                        const valueSpan = playerDiv.querySelector('span:last-child');
+                        if (nameSpan) nameSpan.textContent = `${rank}. ${username}`;
+                        else console.warn(` -> !! Could not find name span for ${username}`);
 
-                        // Update position via CSS variable (triggers animation)
+                        if (valueSpan) {
+                            console.log(` -> Updating value SPAN for ${username} to ${value}`);
+                            valueSpan.textContent = value; // Set new value
+                        } else console.warn(` -> !! Could not find value span for ${username}`);
+
+                        // Update position via CSS variable
                         playerDiv.style.setProperty('--i', index);
 
                         // Update rank class for styling
                         const newRankClass = `rank-${rank}`;
                         if (!playerDiv.classList.contains(newRankClass)) {
-                            // Remove old rank classes before adding new one
-                            playerDiv.className = playerDiv.className.replace(/rank-\d+/g, '').trim();
-                            playerDiv.classList.add('scoreboard-row', newRankClass);
+                             console.log(` -> Updating rank class for ${username} to ${newRankClass}`);
+                             playerDiv.className = playerDiv.className.replace(/rank-\d+/g, '').trim();
+                             playerDiv.classList.add('scoreboard-row', newRankClass);
                         }
 
                         // Update highlight status
-                        if (username === currentUsername) {
-                            playerDiv.classList.add('user-highlight');
-                        } else {
-                            playerDiv.classList.remove('user-highlight');
-                        }
+                        if (username === currentUsername) playerDiv.classList.add('user-highlight');
+                        else playerDiv.classList.remove('user-highlight');
 
                         playerElements.delete(username); // Mark as processed from old map
 
                     } else {
                         // --- CREATE NEW ---
+                        console.log(` -> Creating new element for ${username}`);
                         playerDiv = document.createElement('div');
                         playerDiv.className = `scoreboard-row rank-${rank}`;
-                         if (username === currentUsername) {
-                            playerDiv.classList.add('user-highlight');
-                         }
+                         if (username === currentUsername) playerDiv.classList.add('user-highlight');
                         playerDiv.style.setProperty('--i', index);
-                         // Initial state for entry animation (optional)
-                         // playerDiv.style.opacity = '0';
-
                         playerDiv.innerHTML = `
                             <span>${rank}. ${username}</span>
                             <span>${value}</span>
                         `;
                         leaderboardDiv.appendChild(playerDiv);
-
-                         // Trigger entry animation (optional)
-                         // requestAnimationFrame(() => {
-                         //    requestAnimationFrame(() => { playerDiv.style.opacity = '1'; });
-                         // });
+                         // Optional: Entry animation trigger
+                         // playerDiv.style.opacity = '0';
+                         // requestAnimationFrame(() => { playerDiv.style.opacity = '1'; });
                     }
 
-                    // Add to the next state map (both updated and new elements)
+                    // Add to the next state map
                      nextPlayerElements.set(username, { element: playerDiv, data: playerData, currentRank: rank });
                 });
 
-                // 2. Remove elements that are no longer in the Top list
+                // 2. Remove elements no longer in the Top list
                 playerElements.forEach((entryToRemove, username) => {
-                    console.log(`Removing element for ${username} (dropped off top list)`);
+                    console.log(` -> Removing element for ${username} (dropped off top list)`);
                     const element = entryToRemove.element;
                     element.classList.add('removing'); // Add class for potential exit animation
-
-                    // Remove from DOM after animation (or immediately if no animation)
-                    const transitionDuration = 500; // Match CSS transition duration
                     setTimeout(() => {
-                         if (element.parentNode === leaderboardDiv) { // Check if still attached
+                         // Double check before removing, in case things changed rapidly
+                         if (element.parentNode === leaderboardDiv && !nextPlayerElements.has(username)) {
                               leaderboardDiv.removeChild(element);
+                         } else {
+                              console.log(` -> Skipping removal for ${username}, already removed or re-added.`);
                          }
-                    }, transitionDuration); // Use timeout slightly longer than transition
+                    }, 500); // Match CSS transition or adjust
                 });
 
                 // 3. Update the main state map
                 playerElements = nextPlayerElements;
+                console.log("Updated playerElements Map size:", playerElements.size);
 
                 // 4. Update User Rank Display (separate div)
                  if (currentUserRankData.rank !== null && currentUserRankData.rank !== undefined) {
+                     // *** Ensure value calculation uses the current sortBy parameter ***
                      const userValue = sortBy === 'score' ? (currentUserRankData.score ?? 0) : (currentUserRankData.mostStreak ?? 0);
                      const rankString = formatRank(currentUserRankData.rank);
-                     userRankDiv.innerHTML = `Your Rank: <span id="user-rank-text">${rankString} (${sortBy === 'score' ? 'Score' : 'Streak'}: ${userValue})</span>`;
+                     userRankDiv.innerHTML = `Your Rank: <span id="user-rank-text">${rankString} (${sortBy === 'score' ? 'Score' : 'Streak'}: ${userValue})</span>`; // Show sort type
                      userRankDiv.style.display = 'block';
                  } else {
-                     userRankDiv.style.display = 'none'; // Hide if user has no rank
+                     userRankDiv.style.display = 'none';
                  }
 
                  // 5. Handle the special row for user outside top 10
@@ -453,46 +501,43 @@
                 }
 
             } catch (error) {
-                console.error('Error in fetchLeaderboard:', error);
-                // Avoid showing error if auth redirect is happening
-                if (!error.message.includes('Authentication failed')) {
+                // Errors thrown from within the try block (Auth, HTTP, Data format, etc.)
+                console.error('Caught error during fetchLeaderboard execution:', error);
+                // Avoid setting status message if auth redirect already happened
+                if (!error.message.includes("Authentication")) {
                      setStatusMessage('Could not load leaderboard.', 'error');
                 }
+                // Re-throw the error so the .catch() in requestLeaderboardUpdate sees it
+                throw error;
             }
+            // The 'finally' block in requestLeaderboardUpdate will handle resetting the flag
         }
 
         // Helper function specifically for the user outside top 10 row
-        function handleUserOutsideTop10(userData, topUsernames, sortBy) {
+        function handleUserOutsideTop10(userData, topUsernames, sortBy) { // Ensure sortBy is passed
              const userRowOutsideId = 'user-rank-outside-row';
              let userRowOutside = document.getElementById(userRowOutsideId);
-             const shouldShowOutside = userData.rank > 10 && !topUsernames.has(currentUsername);
+             const shouldShowOutside = userData.rank !== null && userData.rank > 10 && !topUsernames.has(currentUsername);
 
              if (shouldShowOutside) {
+                 // *** Ensure value calculation uses the current sortBy parameter ***
                  const userValue = sortBy === 'score' ? (userData.score ?? 0) : (userData.mostStreak ?? 0);
-                 const rankString = formatRank(userData.rank);
+                 const rankString = formatRank(userData.rank); // Use formatRank
 
                  if (!userRowOutside) { // Create if doesn't exist
                      userRowOutside = document.createElement('div');
                      userRowOutside.id = userRowOutsideId;
-                     userRowOutside.className = 'scoreboard-row user-rank-outside'; // Specific class
-                     userRowOutside.style.setProperty('--i', 10); // Fixed position below top 10
+                     userRowOutside.className = 'scoreboard-row user-rank-outside';
+                     userRowOutside.style.setProperty('--i', 10); // Fixed position
                      leaderboardDiv.appendChild(userRowOutside);
-                      // Entry animation?
-                      // userRowOutside.style.opacity = '0';
-                      // requestAnimationFrame(() => { userRowOutside.style.opacity = '1'; });
                  }
                  // Update content
                  userRowOutside.innerHTML = `
                       <span>${userData.rank}. ${currentUsername}</span>
-                      <span>${userValue}</span>
+                      <span>${userValue}</span> <!-- Display correct value -->
                  `;
 
              } else if (userRowOutside) { // Remove if exists but shouldn't be shown
-                  // Exit animation?
-                  // userRowOutside.classList.add('removing');
-                  // setTimeout(() => userRowOutside.remove(), 500);
-
-                  // Simple remove:
                   userRowOutside.remove();
              }
         }
@@ -500,10 +545,14 @@
 
         // --- Initial Load ---
         window.addEventListener('load', () => {
-            if (token && currentUsername) {
-                fetchLeaderboard(sortBySelect.value); // Initial fetch
+            // Check auth state on load
+            currentUsername = sessionStorage.getItem('username');
+            const currentToken = localStorage.getItem('token');
+            if (currentToken && currentUsername) {
+                requestLeaderboardUpdate(); // Use the guarded request function for initial load too
             } else {
                 console.log('Auth missing on load. Redirecting.');
+                // No need to call clearAuthDataAndRedirect here, just redirect
                 window.location.href = 'index.html';
             }
         });
