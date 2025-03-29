@@ -21,6 +21,7 @@ body {
     grid-template-columns: repeat(5, 100px);
     gap: 10px;
     margin: 20px auto;
+    justify-content: center;
 }
 
 .tile {

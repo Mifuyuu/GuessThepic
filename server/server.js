@@ -7,19 +7,41 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const connectDB = require('./db');
 
+// --- Socket.IO Setup ---
+const http = require('http'); // Import http module
+const { Server } = require("socket.io"); // Import Server class from socket.io
+// --- End Socket.IO Setup ---
+
 const app = express();
+// --- Create HTTP server and integrate Socket.IO ---
+const server = http.createServer(app); // Create HTTP server using Express app
+const io = new Server(server, { // Attach Socket.IO to the HTTP server
+    cors: {
+        // origin: "http://localhost:YOUR_FRONTEND_PORT", // <<< ระบุ Origin ของ Frontend (ถ้าแยก Port หรือ domain)
+        origin: "*", // อนุญาตทุก Origin (สะดวกสำหรับการทดสอบ แต่ไม่ปลอดภัยสำหรับ Production)
+        methods: ["GET", "POST"]
+    }
+});
+// --- End Create HTTP server ---
+
 app.use(express.json());
-app.use(cors());
+app.use(cors()); // CORS for regular HTTP requests
 
 connectDB();
 
 app.use(express.static(path.join(__dirname, '../public')));
 
-app.get('/api/port', (req, res) => {
-    res.json({ port: process.env.PORT || 3000 });
+// Serve Socket.IO client library
+app.get('/socket.io/socket.io.js', (req, res) => {
+  res.sendFile(path.join(__dirname, '../node_modules/socket.io/client-dist/socket.io.js'));
 });
 
-const secretKey = process.env.JWT_SECRET || 'your_secret_key';
+
+// app.get('/api/port', (req, res) => {
+//     res.json({ port: process.env.PORT || 3000 });
+// });
+
+const secretKey = process.env.JWT_SECRET || 'your_secret_key'; // ควรตั้งค่าใน .env
 
 // User Schema and Model
 const userSchema = new mongoose.Schema({
@@ -52,10 +74,10 @@ const User = mongoose.model('User', userSchema);
 
 // Score Schema and Model
 const scoreSchema = new mongoose.Schema({
-    username: { type: String, required: true, ref: 'User' },
-    score: Number,
-    correctStreak: Number,
-    mostStreak: Number
+    username: { type: String, required: true, ref: 'User', index: true }, // Added index for faster lookups
+    score: { type: Number, default: 0, index: true }, // Added index for sorting
+    correctStreak: { type: Number, default: 0 },
+    mostStreak: { type: Number, default: 0, index: true } // Added index for sorting
 });
 const Score = mongoose.model('Score', scoreSchema);
 
@@ -65,15 +87,27 @@ const authenticateToken = (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
+        // Allow access to leaderboard even without token (optional, depends on requirements)
+        // if (req.path === '/api/leaderboard' && req.method === 'GET') {
+        //     return next();
+        // }
         return res.status(401).send('Authentication required.');
     }
 
     jwt.verify(token, secretKey, (err, user) => {
         if (err) {
-            return res.status(403).send('Invalid token.');
+             // Handle specific JWT errors
+             if (err.name === 'TokenExpiredError') {
+                return res.status(401).send('Token expired.');
+             }
+             if (err.name === 'JsonWebTokenError') {
+                return res.status(403).send('Invalid token.');
+             }
+            return res.status(403).send('Invalid token.'); // General fallback
         }
 
-        req.user = user;
+        // Attach user data (userId, username) to the request object
+        req.user = { userId: user.userId, username: user.username };
         next();
     });
 };
@@ -91,13 +125,14 @@ app.post('/api/register', async (req, res) => {
         if (!username || !password) {
             return res.status(400).send('Please enter a username and password.');
         }
+        // Add more robust validation if needed (e.g., regex for username/password)
         if (password.length < 8) {
             return res.status(400).send('Password must be at least 8 characters long.');
         }
         if (username.length < 3) {
             return res.status(400).send('Username must be at least 3 characters long.');
         }
-        if (username.length > 15) {
+        if (username.length > 20) { // Adjusted max length
             return res.status(400).send('Username must be at most 20 characters long.');
         }
         const user = new User({ username, password });
@@ -105,13 +140,21 @@ app.post('/api/register', async (req, res) => {
         res.status(201).send('User registered successfully!');
     } catch (error) {
         console.error('Error registering user:', error);
-        res.status(500).send('Error registering user: ' + error.message);
+        // Avoid sending detailed error messages to the client in production
+        if (error.code === 11000) { // Duplicate key error
+             return res.status(400).send('Username already exists.');
+        }
+        res.status(500).send('Error registering user');
     }
 });
 
 // Login (Sign-in) Endpoint
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
+
+     if (!username || !password) {
+        return res.status(400).send('Please provide username and password.');
+    }
 
     try {
         const user = await User.findOne({ username });
@@ -124,121 +167,213 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).send('Invalid username or password.');
         }
 
-        const token = jwt.sign({ userId: user._id, username: user.username }, secretKey, { expiresIn: '1h' });
+        // Create JWT payload
+        const payload = { userId: user._id, username: user.username };
+        // Sign the token
+        const token = jwt.sign(payload, secretKey, { expiresIn: '1h' }); // Consider longer expiration or refresh tokens
 
-        res.status(200).json({ message: 'Login successful!', token: token });
+        // Send token and potentially user info back
+        res.status(200).json({
+            message: 'Login successful!',
+            token: token,
+            username: user.username // Sending username back can be useful for the frontend
+        });
     } catch (error) {
         console.error('Error logging in:', error);
-        res.status(500).send('Error logging in: ' + error.message);
+        res.status(500).send('Error logging in');
     }
 });
 
 // Save Score Endpoint (Protected)
 app.post('/api/scores', authenticateToken, async (req, res) => {
-    // ไม่จำเป็นต้องรับ username จาก body เพราะเราได้จาก token ที่ verify แล้ว
-    const { score, correctStreak, mostStreak } = req.body;
-    const username = req.user.username; // ใช้ username จาก token
+    const { score: scoreFromClient, correctStreak: currentCorrectStreak, mostStreak: currentMostStreak } = req.body;
+    const username = req.user.username;
 
-    // ตรวจสอบว่าค่าที่จำเป็นมีครบ
-    if (score === undefined || correctStreak === undefined || mostStreak === undefined) {
-        return res.status(400).json({ message: 'Missing score data (score, correctStreak, mostStreak required).' });
+    if (typeof scoreFromClient !== 'number' || typeof currentCorrectStreak !== 'number' || typeof currentMostStreak !== 'number') {
+        return res.status(400).json({ message: 'Invalid score data types (score, correctStreak, mostStreak must be numbers).' });
     }
 
     try {
-        // ใช้ findOneAndUpdate พร้อม upsert: true
-        // ถ้าเจอ document ที่ username ตรงกัน จะ update
-        // ถ้าไม่เจอ จะสร้าง document ใหม่ตามเงื่อนไขใน $setOnInsert
-        const updatedPlayer = await Score.findOneAndUpdate(
-            { username: username }, // เงื่อนไขการค้นหา
+        // Step 1: Upsert if not exists
+        await Score.updateOne(
+            { username },
             {
-                $inc: { score: score }, // เพิ่มค่า score เข้าไป (ระวังถ้าต้องการ logic แบบอื่น)
-                $set: { correctStreak: correctStreak }, // ตั้งค่า streak ปัจจุบัน
-                $max: { mostStreak: mostStreak }, // ตั้งค่า mostStreak เป็นค่าสูงสุดระหว่างค่าเดิมกับค่าใหม่
-                $setOnInsert: { username: username } // ตั้งค่า username กรณีเป็นการสร้างใหม่ (upsert)
+                $setOnInsert: {
+                    username,
+                    score: 0,
+                    correctStreak: 0,
+                    mostStreak: 0
+                }
+            },
+            { upsert: true }
+        );
+
+        // Step 2: Actual update
+        const updatedPlayer = await Score.findOneAndUpdate(
+            { username },
+            {
+                $inc: { score: scoreFromClient },
+                $set: { correctStreak: currentCorrectStreak },
+                $max: { mostStreak: currentMostStreak }
             },
             {
-                new: true, // คืนค่า document ที่ update แล้ว
-                upsert: true // สร้างใหม่ถ้าไม่เจอ
+                new: true,
+                runValidators: true
             }
         );
 
         if (!updatedPlayer) {
-             // กรณีนี้ไม่ควรเกิดถ้า upsert: true ทำงานถูกต้อง แต่อาจใส่ไว้เผื่อกรณีแปลกๆ
-             console.error('Failed to update or insert score for user:', username);
-             return res.status(500).json({ message: 'Server error during score update/insert' });
+            console.error('CRITICAL: Could not update score for user:', username);
+            return res.status(500).json({ message: 'Server error: Could not update score.' });
         }
 
-        // ส่งข้อมูลคะแนนล่าสุดกลับไป (อาจจะไม่จำเป็นเสมอไป)
-        res.json({
+        io.emit('scoreUpdated');
+        console.log(`Score updated for ${username}. Emitting 'scoreUpdated' event.`);
+
+        res.status(200).json({
             message: 'Score updated successfully',
-            newScore: updatedPlayer.score,
+            username: updatedPlayer.username,
+            score: updatedPlayer.score,
             correctStreak: updatedPlayer.correctStreak,
             mostStreak: updatedPlayer.mostStreak
         });
 
     } catch (error) {
         console.error(`Error updating score for user ${username}:`, error);
-        // เพิ่มรายละเอียด error ใน log
-        console.error("Error object:", error);
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
         res.status(500).json({ message: 'Server error while updating score' });
     }
 });
 
-// Get Player Data Endpoint (Protected)
-app.get('/api/player/:username', authenticateToken, async (req, res) => {
-    const { username } = req.params;
+
+// Get Player Data Endpoint (Protected) - Optional if game fetches data differently
+app.get('/api/player/me', authenticateToken, async (req, res) => {
+    const username = req.user.username; // Get username from authenticated token
 
     try {
-        const user = await User.findOne({ username });
-        if (!user) {
-            return res.status(404).send('User not found.');
-        }
-
-        const player = await Score.findOne({ username: user.username });
+        const player = await Score.findOne({ username: username });
 
         if (player) {
-            res.json({ score: player.score, correctStreak: player.correctStreak, mostStreak: player.mostStreak });
+            res.json({
+                username: player.username,
+                score: player.score,
+                correctStreak: player.correctStreak,
+                mostStreak: player.mostStreak
+            });
         } else {
-            res.json({ score: 0, correctStreak: 0, mostStreak: 0 });
+            // If user exists but has no score record yet
+             res.json({
+                username: username, // Still return username
+                score: 0,
+                correctStreak: 0,
+                mostStreak: 0
+             });
         }
     } catch (error) {
-        console.error('Error fetching player data:', error);
-        res.status(500).send('Error fetching player data: ' + error.message);
+        console.error('Error fetching player data for', username, ':', error);
+        res.status(500).send('Error fetching player data');
     }
 });
 
-// Get Leaderboard Endpoint (Protected)
+
+// Get Leaderboard Endpoint (Protected or Public - using authenticateToken makes it protected)
+// authenticateToken middleware ensures req.user exists if a valid token is provided
 app.get('/api/leaderboard', authenticateToken, async (req, res) => {
-    const sortBy = req.query.sortBy === 'mostStreak' ? 'mostStreak' : 'score';
-    const username = req.user.username;
+    const sortBy = req.query.sortBy === 'mostStreak' ? 'mostStreak' : 'score'; // Default to 'score'
+    const limit = 10; // Number of top players to fetch
+    const username = req.user?.username; // Get username from token if authenticated
+
     try {
-        const leaderboard = await Score.find().sort({ [sortBy]: -1 }).limit(10).lean();
+        // Fetch top N players sorted by the chosen field
+        const leaderboard = await Score.find()
+            .sort({ [sortBy]: -1, _id: 1 }) // Secondary sort by _id for consistent ordering on ties
+            .limit(limit)
+            .select('username score mostStreak -_id') // Select only needed fields, exclude _id
+            .lean(); // Use lean for performance if not modifying docs
 
         let userRank = null;
-        let userScore = 0;
-        let userMostStreak = 0;
+        let userScoreData = null;
 
+        // If the user is authenticated, find their rank and score
         if (username) {
-            const allPlayers = await Score.find().sort({ [sortBy]: -1 }).lean();
-            const playerIndex = allPlayers.findIndex(player => player.username === username);
+            // Efficiently get the count of players with a higher score/streak
+            const countHigher = await Score.countDocuments({
+                [sortBy]: { $gt: (await Score.findOne({ username: username }).select(sortBy).lean())?.[sortBy] ?? -1 } // Find user's score/streak first
+            });
+            userRank = countHigher + 1; // Rank is count of higher scores + 1
 
-            if (playerIndex !== -1) {
-                userRank = playerIndex + 1;
-                const player = allPlayers[playerIndex];
-                userScore = player.score;
-                userMostStreak = player.mostStreak;
+            // Fetch the specific user's score data
+            const userPlayerData = await Score.findOne({ username: username })
+                                              .select('score mostStreak -_id')
+                                              .lean();
+            if(userPlayerData) {
+                userScoreData = {
+                    score: userPlayerData.score,
+                    mostStreak: userPlayerData.mostStreak
+                }
+            } else {
+                // User exists but has no score record yet
+                userScoreData = { score: 0, mostStreak: 0 };
+                // Find rank among all users (even those with 0 score) could be complex,
+                // For simplicity, maybe rank them last or don't show rank yet.
+                // Here we base rank on existing scores, so rank will be high if score is 0.
+                const totalPlayersWithScores = await Score.countDocuments();
+                userRank = totalPlayersWithScores + 1; // Simplistic rank if no score record
             }
         }
-        res.json({ leaderboard, userRank, userScore, userMostStreak });
+
+        res.json({
+            leaderboard,
+            // Only include user-specific data if authenticated
+            ...(username && userRank && userScoreData && {
+                userRank: userRank,
+                userScore: userScoreData.score,
+                userMostStreak: userScoreData.mostStreak
+            })
+        });
+
     } catch (error) {
         console.error('Error fetching leaderboard:', error);
         res.status(500).send('Error fetching leaderboard');
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+// --- Socket.IO Connection Handling ---
+io.on('connection', (socket) => {
+  console.log('A user connected via WebSocket:', socket.id);
+
+  // Optional: Handle authentication for Socket.IO connections if needed
+  // const token = socket.handshake.auth.token;
+  // jwt.verify(token, secretKey, (err, user) => { ... });
+
+  socket.on('disconnect', (reason) => {
+    console.log(`User disconnected: ${socket.id}, Reason: ${reason}`);
+  });
+
+  // Example: Listening for a custom event from a client
+  socket.on('clientEvent', (data) => {
+      console.log(`Received clientEvent from ${socket.id}:`, data);
+      // Can broadcast to others: socket.broadcast.emit('eventForOthers', data);
+  });
+
 });
+// --- End Socket.IO Connection Handling ---
+
+// Fallback for SPA routing (if using client-side routing like React Router, Vue Router)
+// app.get('*', (req, res) => {
+//   res.sendFile(path.join(__dirname, '../public/index.html'));
+// });
+
+
+// Error Handling Middleware (Basic Example)
+app.use((err, req, res, next) => {
+  console.error("Unhandled Error:", err.stack || err);
+  res.status(500).send('Something broke!');
+});
+
+
+const PORT = process.env.PORT || 3000;
+// --- Start the HTTP server (which includes Express and Socket.IO) ---
+server.listen(PORT, () => {
+    console.log(`Server (HTTP + Socket.IO) is running on http://localhost:${PORT}`);
+});
+// --- End Start Server ---

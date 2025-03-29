@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scoreboard</title>
+    <title>Scoreboard (Real-time)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Include Socket.IO Client Library (served by the server) -->
+    <script src="/socket.io/socket.io.js"></script>
     <style>
         * {
             margin: 0;
@@ -16,143 +18,191 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            flex-direction: column;
-            gap: 40px;
-            background-color: #f1f2f296;
-            height: 100vh;
+            min-height: 100vh; /* Use min-height for flexibility */
+            padding: 20px; /* Add padding */
+            background-color: #f0f2f5; /* Slightly different background */
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        #scoreboard-container {
-            width: 500px;
-            text-align: center;
-        }
-
-        h1 {
-            margin-bottom: 20px;
             color: #333;
         }
 
+        #scoreboard-container {
+            width: 100%;
+            max-width: 600px; /* Max width for larger screens */
+            text-align: center;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-bottom: 25px;
+            color: #1a237e; /* Darker blue */
+            font-weight: 700;
+        }
+
+        #sort-controls {
+             display: flex;
+             justify-content: space-between; /* Space out elements */
+             align-items: center;
+             margin-bottom: 25px;
+             gap: 15px; /* Add gap between elements */
+        }
+
+        #sort-controls label {
+            font-weight: 500;
+            color: #555;
+        }
+
         #sort-by {
-            margin-bottom: 20px;
-            padding: 8px 12px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
             font-size: 1rem;
+            flex-grow: 1; /* Allow select to grow */
+            background-color: #fff;
+            cursor: pointer;
         }
 
         #leaderboard {
             position: relative;
-            height: 500px;
+            min-height: 300px; /* Minimum height */
             width: 100%;
+            margin-bottom: 20px; /* Space below leaderboard */
+            overflow: hidden; /* Prevent unexpected overflow */
         }
 
         :root {
-            --team-height: 60px;
-            --team-spacing: 10px;
+            --team-height: 55px;
+            --team-spacing: 8px;
         }
 
         .scoreboard-row {
             position: absolute;
-            width: 90%;
+            width: 100%; /* Use full width within container */
             height: var(--team-height);
-            background: var(--color);
-            box-shadow: 0 3px 5px #0000001f;
-            left: 50%;
-            transform: translateX(-50%);
+            background: var(--color, #607d8b); /* Default color */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            left: 0; /* Align to the left */
+            transform: none; /* Remove previous transform */
             top: calc(var(--i) * (var(--team-height) + var(--team-spacing)));
             display: flex;
             align-items: center;
-            transition-property: top;
-            transition-duration: 500ms;
-            border-radius: 10px;
-            transition-timing-function: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        .scoreboard-row span:first-child {
-            width: 80%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            margin: 20px 0;
-            font-size: 1.1rem;
+            justify-content: space-between; /* Space name and score */
+            transition: top 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55), background-color 0.3s ease;
+            border-radius: 8px;
+            padding: 0 20px; /* Padding inside the row */
             color: #fff;
-            font-weight: 600;
-            text-transform: capitalize;
-            padding-left: 20px;
+            font-weight: 500;
         }
 
-        .scoreboard-row span:last-child {
-            width: var(--team-height);
-            margin: 20px 0;
-            font-size: 1.4rem;
-            color: #fff;
-            font-weight: 600;
-            padding-right: 20px;
+        .scoreboard-row span:first-child { /* Rank + Username */
+            font-size: 1.05rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis; /* Add ellipsis if name is too long */
+            margin-right: 10px; /* Space between name and score */
         }
 
-        .no-ranking {
-            font-style: italic;
-            color: #777;
+        .scoreboard-row span:last-child { /* Score/Streak */
+            font-size: 1.2rem;
+            font-weight: 600;
+            min-width: 40px; /* Ensure score area has min width */
+            text-align: right;
+        }
+
+        /* Add highlight style */
+        .user-highlight {
+             border: 2px solid #ffeb3b; /* Yellow border */
+             box-shadow: 0 0 10px rgba(255, 235, 59, 0.5);
+        }
+
+        .status-message { /* Common style for loading/error/no-ranking */
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            font-style: italic;
+            color: #777;
+            font-size: 1rem;
+            padding: 20px;
+            text-align: center;
         }
 
         #user-rank {
             margin-top: 20px;
-            font-weight: bold;
-            background-color: #5c6bc0;
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
+            font-weight: 600;
+            background-color: #e8eaf6; /* Light indigo background */
+            color: #3f51b5; /* Indigo text */
+            padding: 12px 18px;
+            border-radius: 8px;
+            border: 1px solid #c5cae9;
+            text-align: center; /* Center text */
+        }
+
+        #user-rank-text {
+            color: #1a237e; /* Darker color for the rank details */
         }
 
         #back-to-game {
-            margin-top: 20px;
-            padding: 10px 20px;
-            background-color: #42a5f5;
+            margin-top: 25px;
+            padding: 12px 25px;
+            background: linear-gradient(45deg, #42a5f5, #1e88e5); /* Gradient background */
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 1rem;
-            transition: background-color 0.3s;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         #back-to-game:hover {
-            background-color: #1e88e5;
+            background: linear-gradient(45deg, #1e88e5, #1565c0);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px); /* Slight lift effect */
+        }
+        #back-to-game:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
-        /* Color variations for different ranks */
-        .rank-1 { --color: #ffd700; }
-        .rank-2 { --color: #c0c0c0; }
-        .rank-3 { --color: #cd7f32; }
-        .rank-4 { --color: #66bb6a; }
-        .rank-5 { --color: #42a5f5; }
-        .rank-6 { --color: #ffa726; }
-        .rank-7 { --color: #ef5350; }
-        .rank-8 { --color: #5c6bc0; }
-        .rank-9 { --color: #a1887f; }
-        .rank-10 { --color: #26c6da; }
-        .user-rank { --color: #7e57c2; }
+
+        /* Color variations (simplified and adjusted) */
+        .rank-1 { --color: #ffc107; color: #424242;} /* Gold */
+        .rank-2 { --color: #e0e0e0; color: #424242;} /* Silver */
+        .rank-3 { --color: #d8a477; } /* Bronze */
+        .rank-4 { --color: #81c784; } /* Green */
+        .rank-5 { --color: #64b5f6; } /* Blue */
+        .rank-6 { --color: #ffb74d; } /* Orange */
+        .rank-7 { --color: #e57373; } /* Red */
+        .rank-8 { --color: #9575cd; } /* Purple */
+        .rank-9 { --color: #78909c; } /* Blue Grey */
+        .rank-10 { --color: #4dd0e1; } /* Cyan */
+        .user-rank-outside { --color: #7e57c2; } /* Specific color for user outside top 10 */
+
     </style>
 </head>
 <body>
     <div id="scoreboard-container">
         <h1>Scoreboard</h1>
-        <select id="sort-by">
-            <option value="score">Sort by Score</option>
-            <option value="mostStreak">Sort by Most Streak</option>
-        </select>
+
+        <div id="sort-controls">
+            <label for="sort-by">Sort By:</label>
+            <select id="sort-by">
+                <option value="score">Score</option>
+                <option value="mostStreak">Highest Streak</option>
+            </select>
+        </div>
 
         <div id="leaderboard">
-            <p class="no-ranking" id="no-ranking" style="display:none;">No ranking</p>
+            <!-- Status messages will be shown here -->
+            <p class="status-message" id="status-message" style="display:none;">Loading...</p>
         </div>
 
         <div id="user-rank" style="display:none;">
-            <p>Your Rank: <span id="user-rank-text"></span></p>
+            <!-- Content set by JavaScript -->
         </div>
 
         <button id="back-to-game">Back to Game</button>
@@ -162,102 +212,185 @@
         const sortBySelect = document.getElementById('sort-by');
         const leaderboardDiv = document.getElementById('leaderboard');
         const userRankDiv = document.getElementById('user-rank');
-        const userRankTextSpan = document.getElementById('user-rank-text');
-        const noRankingMessage = document.getElementById('no-ranking');
+        const statusMessage = document.getElementById('status-message'); // Combined status message element
         const backToGameButton = document.getElementById('back-to-game');
-        let username = ''; // Initialize the username variable
 
-        // Retrieve the username from the session storage
-        let this_username = sessionStorage.getItem('username');
-        if (this_username) {
-            username = this_username;
-        }
-        else {
-            window.location.href = 'signin.html'; // Redirect to the login page if the username is not found in sessionStorage
-        }
+        let currentUsername = sessionStorage.getItem('username'); // Get username once
+        const token = localStorage.getItem('token'); // Get token once
 
-        backToGameButton.addEventListener('click', () => {
-            window.location.href = 'game.html';
+        // --- Socket.IO Client Setup ---
+        // Initialize socket connection (consider passing token for auth if implemented on server)
+        const socket = io({
+            // auth: { token: token } // Uncomment if server verifies socket connections via token
         });
 
-        sortBySelect.addEventListener('change', () => {
+        socket.on('connect', () => {
+            console.log('Successfully connected to Socket.IO server:', socket.id);
+        });
+
+        // *** Listen for 'scoreUpdated' event from Server ***
+        socket.on('scoreUpdated', () => {
+            console.log('Received "scoreUpdated" event. Fetching latest leaderboard...');
+            // Fetch leaderboard using the current sort selection
             fetchLeaderboard(sortBySelect.value);
         });
 
+        socket.on('disconnect', (reason) => {
+            console.warn('Disconnected from Socket.IO server. Reason:', reason);
+            // Optionally display a message to the user about the lost real-time connection
+            setStatusMessage('Real-time updates disconnected. Reload to reconnect.', 'warning');
+        });
+
+        socket.on('connect_error', (error) => {
+          console.error('Socket.IO connection error:', error);
+          // Display a persistent error message
+          setStatusMessage(`Connection error: ${error.message}. Real-time updates unavailable.`, 'error');
+        });
+        // --- End Socket.IO Client Setup ---
+
+        // --- Helper function to display status messages ---
+        function setStatusMessage(message, type = 'info') {
+            statusMessage.textContent = message;
+            statusMessage.style.display = 'block';
+            // Optional: Add classes based on type for styling (e.g., error, warning, info)
+            statusMessage.className = `status-message status-${type}`;
+            // Clear leaderboard content when showing status
+            leaderboardDiv.innerHTML = '';
+            userRankDiv.style.display = 'none';
+        }
+
+        // --- Event Listeners ---
+        backToGameButton.addEventListener('click', () => {
+            window.location.href = 'game.html'; // Ensure this path is correct
+        });
+
+        sortBySelect.addEventListener('change', () => {
+            fetchLeaderboard(sortBySelect.value); // Fetch when sort option changes
+        });
+
+        // --- Core Function to Fetch and Display Leaderboard ---
         async function fetchLeaderboard(sortBy = 'score') {
-            const token = localStorage.getItem('token');
+            // Check for token and username upfront
+            if (!token || !currentUsername) {
+                console.error('Authentication missing (token or username). Redirecting to login.');
+                // Clear potentially invalid stored items
+                localStorage.removeItem('token');
+                sessionStorage.removeItem('username');
+                window.location.href = 'index.html'; // Redirect to login/home
+                return; // Stop execution
+            }
+
+            setStatusMessage('Loading leaderboard...', 'info'); // Show loading message
+
             try {
-                const response = await fetch(`/api/leaderboard?sortBy=${sortBy}&username=${username}`, {
+                const response = await fetch(`/api/leaderboard?sortBy=${sortBy}`, {
+                    method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
                     }
                 });
+
+                // Handle HTTP errors specifically
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        console.error('Authentication error (401/403). Token might be invalid or expired.');
+                        localStorage.removeItem('token');
+                        sessionStorage.removeItem('username');
+                        setStatusMessage('Authentication failed. Please log in again.', 'error');
+                        // Optional: Redirect after a delay
+                        setTimeout(() => window.location.href = 'index.html', 3000);
+                    } else {
+                        // Other server errors
+                        setStatusMessage(`Error loading leaderboard: ${response.status} ${response.statusText}`, 'error');
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`); // Throw to stop further processing
+                }
+
                 const data = await response.json();
 
-                leaderboardDiv.innerHTML = '';
+                // --- Render Leaderboard ---
+                leaderboardDiv.innerHTML = ''; // Clear previous content or loading message
+                statusMessage.style.display = 'none'; // Hide status message on success
+
+                if (!data || !Array.isArray(data.leaderboard)) {
+                    console.error("Invalid data format received:", data);
+                    setStatusMessage("Failed to process leaderboard data.", 'error');
+                    return;
+                }
 
                 if (data.leaderboard.length === 0) {
-                    noRankingMessage.style.display = 'block';
+                    setStatusMessage("No players on the leaderboard yet.", 'info');
                 } else {
-                    noRankingMessage.style.display = 'none';
-                    
-                    // Display top 10 players
+                    // Display top players
                     data.leaderboard.forEach((player, index) => {
+                        const rank = index + 1;
+                        const playerUsername = player.username || 'Anonymous';
+                        const value = sortBy === 'score' ? (player.score ?? 0) : (player.mostStreak ?? 0);
+
                         const row = document.createElement('div');
-                        row.className = `scoreboard-row rank-${index + 1}`;
+                        row.className = `scoreboard-row rank-${rank}`;
                         row.style.setProperty('--i', index);
-                        
-                        // Choose what to display based on sortBy
-                        const value = sortBy === 'score' ? player.score : player.mostStreak;
-                        const label = sortBy === 'score' ? 'Score' : 'Streak';
-                        
+
+                        // Highlight the current user within the top list
+                        if (playerUsername === currentUsername) {
+                            row.classList.add('user-highlight');
+                        }
+
                         row.innerHTML = `
-                            <span>${index + 1}. ${player.username}</span>
+                            <span>${rank}. ${playerUsername}</span>
                             <span>${value}</span>
                         `;
                         leaderboardDiv.appendChild(row);
                     });
-
-                    // Add user if not in top 10
-                    if (data.userRank && data.userRank > 10) {
-                        userRankDiv.style.display = 'block';
-                        const userValue = sortBy === 'score' ? data.userScore : data.userMostStreak;
-                        userRankTextSpan.textContent = `Rank ${data.userRank}, ${sortBy === 'score' ? 'Score' : 'Streak'}: ${userValue}`;
-
-                        const row = document.createElement('div');
-                        row.className = 'scoreboard-row user-rank';
-                        row.style.setProperty('--i', 10); // Place below top 10
-                        
-                        const userValueDisplay = sortBy === 'score' ? data.userScore : data.userMostStreak;
-                        row.innerHTML = `
-                            <span>${data.userRank}. ${username}</span>
-                            <span>${userValueDisplay}</span>
-                        `;
-                        leaderboardDiv.appendChild(row);
-                    } else {
-                        userRankDiv.style.display = 'none';
-                    }
                 }
 
+                // --- Display User's Rank (if available) ---
+                if (data.userRank !== undefined && data.userRank !== null) {
+                    const userValue = sortBy === 'score' ? (data.userScore ?? 0) : (data.userMostStreak ?? 0);
+                    const rankText = data.userRank === 1 ? "1st" : data.userRank === 2 ? "2nd" : data.userRank === 3 ? "3rd" : `${data.userRank}th`;
+
+                    userRankDiv.innerHTML = `Your Rank: <span id="user-rank-text">${rankText} (${sortBy === 'score' ? 'Score' : 'Streak'}: ${userValue})</span>`;
+                    userRankDiv.style.display = 'block';
+
+                    // If user is NOT in the top 10 list already displayed, add their row at the bottom
+                    const userIsInTopList = data.leaderboard.some(p => p.username === currentUsername);
+                    if (!userIsInTopList && data.leaderboard.length >= 10) { // Add only if list is full and user isn't in it
+                         const row = document.createElement('div');
+                         row.className = 'scoreboard-row user-rank-outside'; // Use a specific class
+                         row.style.setProperty('--i', 10); // Position below the top 10 visually
+                         row.innerHTML = `
+                            <span>${data.userRank}. ${currentUsername}</span>
+                            <span>${userValue}</span>
+                         `;
+                         leaderboardDiv.appendChild(row);
+                    }
+
+                } else {
+                    // User is authenticated but might not have a score record yet, or rank couldn't be determined
+                    userRankDiv.innerHTML = `Your rank is not available yet. Play a game!`;
+                    userRankDiv.style.display = 'block'; // Show the message
+                }
+
+
             } catch (error) {
-                console.error('Error fetching leaderboard:', error);
-                leaderboardDiv.innerHTML = '<p class="no-ranking">Error loading leaderboard.</p>';
+                console.error('Error fetching or processing leaderboard:', error);
+                // Avoid setting status message if it was already set by HTTP error handling
+                if (statusMessage.style.display === 'none') {
+                    setStatusMessage('Could not load leaderboard. Please try again later.', 'error');
+                }
             }
         }
 
+        // --- Initial Load ---
         window.addEventListener('load', () => {
-            const token = localStorage.getItem('token');
-            if (!token) {
+            if (token && currentUsername) {
+                // Token and username exist, proceed to fetch leaderboard
+                fetchLeaderboard(sortBySelect.value); // Fetch initial data based on default sort
+            } else {
+                // Missing token or username, redirect immediately
+                console.log('Token or username missing on load. Redirecting to login.');
                 window.location.href = 'index.html';
-            }
-            else {
-                const this_username = sessionStorage.getItem('username');
-                if (!this_username) {
-                    window.location.href = 'index.html';
-                }
-                else {
-                    fetchLeaderboard();
-                }
             }
         });
     </script>
