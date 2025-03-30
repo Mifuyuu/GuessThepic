@@ -3,21 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In / Sign Up</title>
-    <link rel="stylesheet" href="style.css">
+    <title>GuessThepic</title>
+    <link rel="stylesheet" href="style.css" type="text/css">
+     <style>
+        /* --- Basic Reset & Body --- */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #1d1d1d;
+        }
+        #auth-container {
+            background-color: #2c2c2c;
+            color: #fff;
+            display: flex;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            h2 {
+                text-align: center;
+                text-transform: uppercase;
+            }
+        }
+        .left-sec, .right-sec {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            width: 50%;
+            gap: 12px;
+        }
+        input {
+            height: 40px;
+            padding: 10px;
+            border: none;
+            font-size: 16px;
+            border-radius: 5px;
+            background-color: #3c3c3c;
+            color: #fff;
+        }
+        input::placeholder {
+            color: #aaa;
+        }
+        input:focus {
+            outline: 2px solid #2b86db;
+            background-color: #4c4c4c;
+            transition: background-color 0.3s ease;
+        }
+     </style>
 </head>
 <body>
     <div id="auth-container">
-        <h2>Sign Up</h2>
-        <input type="text" id="signup-username" placeholder="Username">
-        <input type="password" id="signup-password" placeholder="Password">
-        <button id="signup-btn">Sign Up</button>
-
-        <h2>Sign In</h2>
-        <input type="text" id="signin-username" placeholder="Username">
-        <input type="password" id="signin-password" placeholder="Password">
-        <button id="signin-btn">Sign In</button>
-        <div id="auth-message"></div>
+        <div class="left-sec">
+            <h2>Sign Up</h2>
+            <input type="text" id="signup-username" placeholder="Username">
+            <input type="password" id="signup-password" placeholder="Password">
+            <button id="signup-btn" class="btn btn-primary">Sign Up</button>
+            <div id="signup-noti"></div>
+        </div>
+        <div class="right-sec">
+            <h2>Sign In</h2>
+            <input type="text" id="signin-username" placeholder="Username">
+            <input type="password" id="signin-password" placeholder="Password">
+            <button id="signin-btn" class="btn btn-primary">Sign In</button>
+            <div id="signin-noti"></div>
+        </div>
     </div>
     <script src="index.logic.js"></script>
 </body>

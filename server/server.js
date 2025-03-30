@@ -125,14 +125,13 @@ app.post('/api/register', async (req, res) => {
         if (!username || !password) {
             return res.status(400).send('Please enter a username and password.');
         }
-        // Add more robust validation if needed (e.g., regex for username/password)
         if (password.length < 8) {
             return res.status(400).send('Password must be at least 8 characters long.');
         }
         if (username.length < 3) {
             return res.status(400).send('Username must be at least 3 characters long.');
         }
-        if (username.length > 20) { // Adjusted max length
+        if (username.length > 20) {
             return res.status(400).send('Username must be at most 20 characters long.');
         }
         const user = new User({ username, password });
@@ -140,8 +139,7 @@ app.post('/api/register', async (req, res) => {
         res.status(201).send('User registered successfully!');
     } catch (error) {
         console.error('Error registering user:', error);
-        // Avoid sending detailed error messages to the client in production
-        if (error.code === 11000) { // Duplicate key error
+        if (error.code === 11000) {
              return res.status(400).send('Username already exists.');
         }
         res.status(500).send('Error registering user');

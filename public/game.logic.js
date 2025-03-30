@@ -71,7 +71,6 @@ async function initGame() {
             // อาจจะแสดงปุ่ม sign out หรือ refresh
             return; // หยุดการทำงาน initGame
         }
-
         // 2. Fetch Game Images (ทำหลังจากได้ข้อมูลผู้เล่น)
         const response = await fetch('data.json'); // ตรวจสอบว่า data.json อยู่ใน public folder
         if (!response.ok) {
@@ -84,7 +83,7 @@ async function initGame() {
         currentImage = images[Math.floor(Math.random() * images.length)];
 
         // 3. Render UI and Start Timer (เมื่อข้อมูลพร้อม)
-        renderGrid();
+        await renderGrid();
         renderChoices();
         renderRandomRevealButton(); // ต้อง render หลังจาก choices div ถูกสร้าง
         updateStatus(); // อัปเดต Status ครั้งแรกด้วยข้อมูลที่ fetch มา
@@ -94,7 +93,6 @@ async function initGame() {
     } catch (error) {
         console.error('Error during game initialization:', error);
         statusDiv.textContent = `Error loading game: ${error.message}. Please refresh.`;
-        // อาจจะต้องเคลียร์ UI บางส่วนถ้าโหลดล้มเหลวกลางคัน
         gameGridDiv.innerHTML = '';
         choicesDiv.innerHTML = '';
     }
