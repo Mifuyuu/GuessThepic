@@ -184,21 +184,23 @@ app.post('/api/login', async (req, res) => {
 
 // Save Score Endpoint (Protected)
 app.post('/api/scores', authenticateToken, async (req, res) => {
-    const { score: scoreFromClient, correctStreak: currentCorrectStreak, mostStreak: currentMostStreak } = req.body;
+    // รับค่า score ที่ Client คำนวณเป็น *คะแนนรวมสุดท้าย* แล้ว
+    const { score: finalScoreFromClient, correctStreak: currentCorrectStreak, mostStreak: currentMostStreak } = req.body;
     const username = req.user.username;
 
-    if (typeof scoreFromClient !== 'number' || typeof currentCorrectStreak !== 'number' || typeof currentMostStreak !== 'number') {
+    // --- การตรวจสอบ Data Type ยังคงเดิม ---
+    if (typeof finalScoreFromClient !== 'number' || typeof currentCorrectStreak !== 'number' || typeof currentMostStreak !== 'number') {
         return res.status(400).json({ message: 'Invalid score data types (score, correctStreak, mostStreak must be numbers).' });
     }
 
     try {
-        // Step 1: Upsert if not exists
+        // --- Step 1: Upsert ยังคงเดิม, ใช้ $setOnInsert เพื่อตั้งค่าเริ่มต้นถ้าไม่มีผู้เล่น ---
         await Score.updateOne(
             { username },
             {
                 $setOnInsert: {
                     username,
-                    score: 0,
+                    score: 0, // ค่าเริ่มต้นเมื่อสร้างครั้งแรก
                     correctStreak: 0,
                     mostStreak: 0
                 }
@@ -206,28 +208,35 @@ app.post('/api/scores', authenticateToken, async (req, res) => {
             { upsert: true }
         );
 
-        // Step 2: Actual update
+        // --- Step 2: อัปเดตข้อมูลผู้เล่นที่มีอยู่ ---
         const updatedPlayer = await Score.findOneAndUpdate(
             { username },
             {
-                $inc: { score: scoreFromClient },
-                $set: { correctStreak: currentCorrectStreak },
+                // --- เปลี่ยนจาก $inc เป็น $set สำหรับ score ---
+                $set: {
+                    score: finalScoreFromClient, // ตั้งค่า score ใน DB ให้เท่ากับคะแนนรวมที่ Client ส่งมา
+                    correctStreak: currentCorrectStreak // ตั้งค่า correctStreak ปัจจุบัน
+                },
+                // --- $max สำหรับ mostStreak ยังคงเดิม เพราะต้องการเก็บค่าสูงสุด ---
                 $max: { mostStreak: currentMostStreak }
             },
             {
-                new: true,
-                runValidators: true
+                new: true, // คืนค่า document ที่อัปเดตแล้ว
+                runValidators: true // เรียกใช้ validation ของ schema (ถ้ามี)
             }
         );
 
+        // --- ส่วนที่เหลือของการจัดการ Response และ Error ยังคงเดิม ---
         if (!updatedPlayer) {
-            console.error('CRITICAL: Could not update score for user:', username);
+            // กรณีนี้ไม่ควรเกิดขึ้นถ้า upsert ทำงานถูกต้อง แต่ใส่ไว้เผื่อ
+            console.error('CRITICAL: Could not find or update score for user after upsert:', username);
             return res.status(500).json({ message: 'Server error: Could not update score.' });
         }
 
-        io.emit('scoreUpdated');
-        console.log(`Score updated for ${username}. Emitting 'scoreUpdated' event.`);
+        io.emit('scoreUpdated'); // แจ้งเตือน Client อื่นๆ ผ่าน Socket.IO
+        console.log(`Score updated for ${username} to ${updatedPlayer.score}. Emitting 'scoreUpdated' event.`);
 
+        // ส่งข้อมูลล่าสุดกลับไปให้ Client ที่ request มา
         res.status(200).json({
             message: 'Score updated successfully',
             username: updatedPlayer.username,

@@ -8,7 +8,8 @@ let gameData = {
 
 let currentImage = null;
 let clicks = 0;
-let score = 100;
+let inGameScore = 100;
+let userScore = 0;
 let correctStreak = 0;
 let mostStreak = 0;
 let username = '';
@@ -17,15 +18,15 @@ const statusDiv = document.getElementById('status');
 const gameGridDiv = document.getElementById('game-grid');
 const choicesDiv = document.getElementById('choices');
 const signoutBtn = document.getElementById('signout-btn');
+const startBtn = document.getElementById('start');
 const restartBtn = document.getElementById('restart');
-const viewScoreboardBtn = document.getElementById('view-scoreboard');
 
-// --- Event Listeners ---
+startBtn.addEventListener('click', initGame);
 restartBtn.addEventListener('click', initGame);
 
-viewScoreboardBtn.addEventListener('click', () => {
-    window.location.href = 'scoreboard.html';
-});
+// viewScoreboardBtn.addEventListener('click', () => {
+//     window.location.href = 'scoreboard.html';
+// });
 
 signoutBtn.addEventListener('click', () => {
     localStorage.removeItem('token');
@@ -41,9 +42,9 @@ window.addEventListener('load', () => {
         console.log('Game page: Token or username missing on load. Redirecting.');
         window.location.href = 'index.html';
     } else {
-        username = sessionUser; // ตั้งค่า username ที่นี่เลย
-        // fetchServerPort(); // --- ลบการเรียกใช้ ---
-        initGame(); // เรียก initGame โดยตรง
+        username = sessionUser;
+        // initGame();
+        startBtn.style.display = 'block';
     }
 });
 // --- สิ้นสุด Event Listeners ---
@@ -52,27 +53,30 @@ window.addEventListener('load', () => {
 async function initGame() {
     console.log('Initializing game...');
     clicks = 0;
-    score = 100; // Reset score สำหรับรอบใหม่
+    // --- รีเซ็ตคะแนนในเกม ---
+    inGameScore = 100; // Reset in-game score สำหรับรอบใหม่
+    // --- Reset ค่าอื่นๆ ---
     gameData.randomReveals = 3;
     gameData.timeLeft = 30;
-    gameData.isActive = true;
-    clearInterval(gameData.timer); // เคลียร์ timer เก่า (ถ้ามี)
+    gameData.isActive = true; // ตั้งค่า isActive ก่อน fetch เพื่อให้ timer ไม่เริ่มเอง
+    clearInterval(gameData.timer);
 
+    startBtn.style.display = 'none';
     restartBtn.style.display = 'none';
-    statusDiv.textContent = 'Loading game data...'; // แสดงสถานะ loading
+    statusDiv.textContent = 'Loading game data...';
 
     try {
-        // 1. Fetch Player Data (สำคัญ: ต้องทำก่อนเริ่มเกม)
-        const playerDataFetched = await fetchPlayerData(); // await เพื่อให้รอข้อมูลผู้เล่นเสร็จก่อน
+        // 1. Fetch Player Data (รวมถึง userScore)
+        const playerDataFetched = await fetchPlayerData();
         if (!playerDataFetched) {
-            // fetchPlayerData จะจัดการ redirect เองถ้าล้มเหลวเรื่อง auth
             console.error("Failed to fetch player data during init. Stopping game initialization.");
             statusDiv.textContent = 'Error loading player data. Please try logging in again.';
-            // อาจจะแสดงปุ่ม sign out หรือ refresh
-            return; // หยุดการทำงาน initGame
+            return;
         }
-        // 2. Fetch Game Images (ทำหลังจากได้ข้อมูลผู้เล่น)
-        const response = await fetch('data.json'); // ตรวจสอบว่า data.json อยู่ใน public folder
+        // Player data (userScore, correctStreak, mostStreak) is now loaded
+
+        // 2. Fetch Game Images
+        const response = await fetch('data.json');
         if (!response.ok) {
             throw new Error(`Failed to load data.json: ${response.statusText}`);
         }
@@ -82,105 +86,96 @@ async function initGame() {
         }
         currentImage = images[Math.floor(Math.random() * images.length)];
 
-        // 3. Render UI and Start Timer (เมื่อข้อมูลพร้อม)
+        // 3. Render UI and Start Timer
         await renderGrid();
         renderChoices();
-        renderRandomRevealButton(); // ต้อง render หลังจาก choices div ถูกสร้าง
-        updateStatus(); // อัปเดต Status ครั้งแรกด้วยข้อมูลที่ fetch มา
-        startTimer();
-        gameData.startTime = Date.now(); // บันทึกเวลาเริ่มจับเวลาสำหรับ bonus
+        renderRandomRevealButton();
+        updateStatus(); // อัปเดต Status ครั้งแรก (แสดง inGameScore เริ่มต้น)
+        startTimer();   // <<< เริ่ม timer หลังจากทุกอย่างพร้อม
+        gameData.startTime = Date.now();
 
     } catch (error) {
         console.error('Error during game initialization:', error);
         statusDiv.textContent = `Error loading game: ${error.message}. Please refresh.`;
         gameGridDiv.innerHTML = '';
         choicesDiv.innerHTML = '';
+        // Ensure game is not active on error
+        gameData.isActive = false;
+        clearInterval(gameData.timer);
     }
 }
 
 async function fetchPlayerData() {
     const token = localStorage.getItem('token');
-    // username ถูกตั้งค่าไว้ใน event 'load' แล้ว
-
-    // ตรวจสอบ token และ username อีกครั้ง (เผื่อกรณีเรียกใช้จากที่อื่น)
     if (!token || !username) {
         console.error("fetchPlayerData: Missing token or username.");
-        // ไม่ควร redirect จากตรงนี้โดยตรง ให้ return false แล้วให้ initGame จัดการ
         return false;
     }
 
     console.log(`Fetching player data for: ${username}`);
     try {
-        // --- ใช้ Relative URL ---
-        const response = await fetch(`/api/player/me`, { // <--- เปลี่ยน Endpoint เป็น /api/player/me (ตามที่แก้ใน server.js) และใช้ Relative URL
-            method: 'GET', // GET เป็น default แต่ใส่เพื่อความชัดเจน
-            headers: {
-                'Authorization': `Bearer ${token}`
-                // 'Content-Type': 'application/json' // ไม่จำเป็นสำหรับ GET ที่ไม่มี body
-            }
+        const response = await fetch(`/api/player/me`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-        // --- สิ้นสุดการเปลี่ยน ---
 
         if (response.ok) {
             const data = await response.json();
-            // ตรวจสอบ data ที่ได้รับ
-            if (data && typeof data.correctStreak !== 'undefined' && typeof data.mostStreak !== 'undefined') {
+            // --- ตรวจสอบและเก็บข้อมูล ---
+            if (data && typeof data.score !== 'undefined' && typeof data.correctStreak !== 'undefined' && typeof data.mostStreak !== 'undefined') {
+                userScore = data.score; // <<< เก็บ userScore ที่ได้จาก DB
                 correctStreak = data.correctStreak;
                 mostStreak = data.mostStreak;
-                console.log('Player data fetched:', { correctStreak, mostStreak });
-                // updateStatus(); // ย้ายไปเรียกใน initGame หลังจาก fetch สำเร็จ
-                return true; // คืนค่า true เพื่อบอกว่าสำเร็จ
+                console.log('Player data fetched:', { userScore, correctStreak, mostStreak });
+                return true;
             } else {
                  console.error('Invalid player data received:', data);
                  statusDiv.textContent = 'Error: Received invalid player data format.';
                  return false;
             }
-
         } else {
-            // Handle specific errors (e.g., unauthorized)
             if (response.status === 401 || response.status === 403) {
-                console.error('Authentication failed (401/403). Token might be invalid/expired. Redirecting...');
+                console.error('Authentication failed (401/403). Redirecting...');
                 localStorage.removeItem('token');
                 sessionStorage.removeItem('username');
-                window.location.href = 'index.html'; // Redirect เมื่อ Auth ล้มเหลว
+                window.location.href = 'index.html';
             } else {
-                // Other errors (500, 404 etc.)
                 const errorText = await response.text();
                 console.error(`Failed to fetch player data (${response.status}):`, errorText);
                 statusDiv.textContent = `Error fetching data: ${response.statusText}. Try refreshing.`;
             }
-            return false; // คืนค่า false เพื่อบอกว่าล้มเหลว
+            return false;
         }
     } catch (error) {
         console.error('Network or other error fetching player data:', error);
         statusDiv.textContent = 'Network error fetching player data. Please check connection.';
-         // ไม่ควร redirect ทันทีสำหรับ network error, ให้ผู้ใช้ลอง refresh เอง
-        return false; // คืนค่า false เพื่อบอกว่าล้มเหลว
+        return false;
     }
 }
 
 function updateStatus() {
-    // คำนวณ bonus ภายใน updateStatus เพื่อให้แสดงผลถูกต้องเสมอ
-    const bonus = (gameData.timeLeft >= 20 && gameData.isActive) ? 50 : 0;
+    // แสดงคะแนนของรอบปัจจุบัน (inGameScore)
+    const bonusHint = (gameData.timeLeft >= 20 && gameData.isActive) ? 50 : 0;
     statusDiv.textContent =
-        `Player: ${username} | Clicks: ${clicks} | Score: ${score} | Time: ${gameData.timeLeft}s | Streak: ${correctStreak} | Max Streak: ${mostStreak}${bonus ? ' (+50 Bonus)' : ''}`;
+        // `Player: ${username} | Current Total: ${userScore} | Round Score: ${inGameScore} | Time: ${gameData.timeLeft}s | Streak: ${correctStreak} | Max Streak: ${mostStreak}${bonusHint ? ' (+50 Bonus)' : ''}`;
+        // หรือแสดงแบบเดิม แต่ให้รู้ว่าตัวเลขคือคะแนนในรอบนั้น
+         `Player: ${username} | Score: ${inGameScore} | Time: ${gameData.timeLeft}s | Streak: ${correctStreak} | Max Streak: ${mostStreak}${bonusHint ? ' (+50 Bonus)' : ''}`;
 }
 
+
 function handleAnswer(selectedIndex) {
-    // ตรวจสอบว่า selectedIndex เป็น number หรือไม่ (ป้องกันกรณี user เลือก default option)
     if (!gameData.isActive || typeof selectedIndex !== 'number' || isNaN(selectedIndex)) {
-        console.log('handleAnswer ignored: Game not active or invalid index', selectedIndex);
         return;
     }
 
-    gameData.isActive = false; // หยุดเกมทันที
-    clearInterval(gameData.timer); // หยุด timer
+    gameData.isActive = false;
+    clearInterval(gameData.timer);
 
-    // คำนวณ bonus score จากเวลาที่เหลือ (หรือเวลาที่ใช้)
-    // ใช้ timeLeft ที่เหลืออยู่ตอนตอบ หรือ คำนวณจาก startTime
-    const bonus = gameData.timeLeft >= 20 ? 50 : gameData.timeLeft >=10 ? 25: 0; // ตัวอย่าง logic bonus
-    let calculatedScore = score + bonus; // นำ score ปัจจุบัน + bonus ก่อน
-
+    const bonus = gameData.timeLeft >= 20 ? 50 : gameData.timeLeft >= 10 ? 25 : 0;
+    // ใช้ inGameScore ณ ตอนที่ตอบ มาคำนวณ
+    let currentRoundScore = inGameScore;
+    let finalScore = userScore; // เริ่มต้น finalScore ด้วย userScore เดิม
+    let pointsChange = 0; // คะแนนที่เปลี่ยนแปลงในรอบนี้
     let message = '';
 
     if (selectedIndex === currentImage.correct) {
@@ -188,63 +183,63 @@ function handleAnswer(selectedIndex) {
         if (correctStreak > mostStreak) {
             mostStreak = correctStreak;
         }
-        // คำนวณ multiplier (อาจจะปรับ logic)
-        const scoreMultiplier = 1 + (0.1 * correctStreak); // ตัวอย่าง: เพิ่ม 10% ต่อ streak
-        calculatedScore = Math.round(calculatedScore * scoreMultiplier); // ใช้คะแนนที่รวม bonus แล้ว มาคูณ
+        const scoreMultiplier = 1 + (0.1 * correctStreak);
+        // คำนวณคะแนนที่ *ได้* จากรอบนี้ (รวม bonus และ multiplier)
+        let pointsEarned = Math.round((currentRoundScore + bonus) * scoreMultiplier);
+        pointsChange = pointsEarned; // คะแนนที่เพิ่มขึ้น
+        finalScore = userScore + pointsChange; // นำไปบวกกับ userScore เดิม
 
-        message = `🎉 Correct! +${calculatedScore - score} Points (Score: ${calculatedScore}) | Streak: ${correctStreak} | Max Streak: ${mostStreak}`;
-        score = calculatedScore; // อัปเดต score หลัก
-
+        message = `🎉 Correct! +${pointsChange} Points (New Total: ${finalScore}) | Streak: ${correctStreak} | Max Streak: ${mostStreak}`;
     } else {
-        correctStreak = 0; // รีเซ็ต streak
-        calculatedScore = Math.max(calculatedScore - 50, 0); // ลดคะแนนเมื่อตอบผิด (อาจจะปรับ)
-        message = `❌ Wrong! Correct: ${currentImage.choices[currentImage.correct]} (Score: ${calculatedScore}) | Streak: 0 | Max Streak: ${mostStreak}`;
-        score = calculatedScore; // อัปเดต score หลัก
+        correctStreak = 0;
+        // กำหนดค่า Penalty ที่จะ *หัก* ออกจาก userScore
+        let penalty = 50; // จำนวนคะแนนที่จะหัก
+        pointsChange = -penalty; // คะแนนที่เปลี่ยนแปลง (ติดลบ)
+        finalScore = Math.max(userScore + pointsChange, 0); // นำไปลบออกจาก userScore เดิม (ไม่ต่ำกว่า 0)
+
+        message = `❌ Wrong! -${penalty} Points. Correct: ${currentImage.choices[currentImage.correct]} (New Total: ${finalScore}) | Streak: 0 | Max Streak: ${mostStreak}`;
     }
 
-    statusDiv.textContent = message; // แสดงผลลัพธ์
-    saveScoreToServer(score, correctStreak, mostStreak); // ส่ง score ล่าสุดไป server
+    statusDiv.textContent = message; // แสดงผลลัพธ์ (คะแนนรวมใหม่)
+    // --- อัปเดต userScore ใน client ทันทีเพื่อให้แสดงผลถูกต้องหากเล่นต่อ ---
+    userScore = finalScore;
+    // --- บันทึกคะแนนรวมสุดท้าย ---
+    saveScoreToServer(finalScore, correctStreak, mostStreak);
     revealAllTiles();
-    restartBtn.style.display = 'block'; // แสดงปุ่มเริ่มใหม่
+    restartBtn.style.display = 'block';
 }
 
-async function saveScoreToServer(finalScore, currentCorrectStreak, currentMostStreak) {
+async function saveScoreToServer(finalScoreToSave, currentCorrectStreak, currentMostStreak) { // เปลี่ยนชื่อ parameter เพื่อความชัดเจน
     const token = localStorage.getItem('token');
-    // username มีอยู่แล้วในตัวแปร global
-
-    console.log('Attempting to save score:', { finalScore, currentCorrectStreak, currentMostStreak });
+    console.log('Attempting to save score:', { finalScoreToSave, currentCorrectStreak, currentMostStreak });
 
     if (!token || !username) {
         console.error('Cannot save score: Missing token or username.');
-        // อาจจะแจ้งเตือนผู้ใช้ แต่ไม่ควร redirect
         return;
     }
 
     try {
-        // --- ใช้ Relative URL ---
-        const response = await fetch(`/api/scores`, { // <--- เปลี่ยนตรงนี้
+        // --- ส่ง finalScoreToSave ซึ่งเป็นคะแนนรวมใหม่ ---
+        const response = await fetch(`/api/scores`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                // ส่งข้อมูลตามที่ server คาดหวัง (ดูจาก POST /api/scores ใน server.js)
-                score: finalScore, // Server อาจจะใช้ $inc หรือ $set, ต้องดู logic ที่ server
+                score: finalScoreToSave, // ส่งคะแนนรวมสุดท้ายไปให้ server อัปเดต
                 correctStreak: currentCorrectStreak,
                 mostStreak: currentMostStreak
-                // username ไม่ต้องส่ง เพราะ server อ่านจาก token
             })
         });
-        // --- สิ้นสุดการเปลี่ยน ---
 
-        const responseData = await response.json(); // อ่าน response เสมอ
-
+        const responseData = await response.json();
         if (response.ok) {
             console.log('Score saved successfully:', responseData);
+            // อาจจะอัปเดต userScore ใน client อีกครั้งเผื่อ server มีการปรับค่า
+            // userScore = responseData.newScore; // หาก server ส่งค่าใหม่กลับมา
         } else {
             console.error(`Failed to save score (${response.status}):`, responseData.message || response.statusText);
-            // แจ้งเตือนผู้ใช้ว่าบันทึกคะแนนไม่สำเร็จ แต่ไม่ redirect
             statusDiv.textContent += ' (Warning: Could not save score)';
         }
     } catch (error) {
@@ -254,13 +249,14 @@ async function saveScoreToServer(finalScore, currentCorrectStreak, currentMostSt
 }
 
 function startTimer() {
-    clearInterval(gameData.timer); // Clear existing timer just in case
+    clearInterval(gameData.timer);
     gameData.timer = setInterval(() => {
-        if (gameData.timeLeft > 0 && gameData.isActive) { // Check isActive ด้วย
+        if (gameData.timeLeft > 0 && gameData.isActive) {
             gameData.timeLeft--;
-            score = Math.max(score - 1, 0); // ลดคะแนนตามเวลา (อาจจะปรับ logic)
-            updateStatus();
-        } else if (gameData.isActive) { // Time runs out while game is active
+            // --- ลดคะแนนของรอบปัจจุบัน ---
+            inGameScore = Math.max(inGameScore - 1, 0);
+            updateStatus(); // แสดง inGameScore ที่ลดลง
+        } else if (gameData.isActive) {
             clearInterval(gameData.timer);
             handleTimeout();
         }
@@ -268,28 +264,36 @@ function startTimer() {
 }
 
 function handleTimeout() {
-    if (!gameData.isActive) return; // ป้องกันการทำงานซ้ำซ้อน
+    if (!gameData.isActive) return;
     gameData.isActive = false;
 
     console.log("Time's up!");
-    score = Math.max(score - 100, 0); // ลดคะแนนเมื่อหมดเวลา
     correctStreak = 0; // รีเซ็ต streak
 
-    statusDiv.textContent = `⏳ Time's up! (Score: ${score}) | Correct: ${currentImage.choices[currentImage.correct]} | Streak: 0 | Max Streak: ${mostStreak}`;
+    // กำหนดค่า Penalty ที่จะ *หัก* ออกจาก userScore เมื่อหมดเวลา
+    let timeOutPenalty = 100;
+    let finalScore = Math.max(userScore - timeOutPenalty, 0); // หักออกจาก userScore เดิม
 
-    saveScoreToServer(score, correctStreak, mostStreak); // บันทึกคะแนน (ที่ติดลบ/เป็น 0)
+    statusDiv.textContent = `⏳ Time's up! -${timeOutPenalty} Points (New Total: ${finalScore}) | Correct: ${currentImage.choices[currentImage.correct]} | Streak: 0 | Max Streak: ${mostStreak}`;
+
+    // --- อัปเดต userScore ใน client ---
+    userScore = finalScore;
+    // --- บันทึกคะแนนรวมสุดท้าย ---
+    saveScoreToServer(finalScore, correctStreak, mostStreak);
     revealAllTiles();
     restartBtn.style.display = 'block';
 }
 
 function revealAllTiles() {
     document.querySelectorAll('.tile-cover').forEach(cover => {
-        if (cover) { // Check if cover exists
+        if (cover) {
            cover.style.opacity = '0';
         }
     });
 }
 
+// --- renderGrid, renderChoices, renderRandomRevealButton เหมือนเดิม ---
+// --- แต่ renderRandomRevealButton ต้องแก้ให้ลด inGameScore ---
 async function renderGrid() { // ทำให้เป็น async ถ้าจะ await getComputedStyle (แต่จริงๆ ไม่จำเป็นต้อง await)
     const grid = document.getElementById('game-grid');
     grid.innerHTML = ''; // Clear previous grid
@@ -372,13 +376,26 @@ async function renderGrid() { // ทำให้เป็น async ถ้าจ�
 
         const cover = document.createElement('div');
         cover.className = 'tile-cover';
-        cover.addEventListener('click', () => handleTileClick(cover));
+        cover.addEventListener('click', () => handleTileClick(cover)); // <<< แก้ไข: ต้องมี handleTileClick
 
         tile.appendChild(imgDiv);
         tile.appendChild(cover);
         grid.appendChild(tile);
     }
 }
+// --- เพิ่ม handleTileClick ที่หายไป ---
+function handleTileClick(coverElement) {
+    if (!gameData.isActive || coverElement.style.opacity === '0') {
+        return; // ไม่ทำงานถ้าเกมไม่ active หรือ tile เปิดอยู่แล้ว
+    }
+    coverElement.style.opacity = '0';
+    clicks++;
+    // อาจจะมีการลดคะแนนเล็กน้อยเมื่อคลิกเปิดเอง (ถ้าต้องการ)
+    // inGameScore = Math.max(inGameScore - 1, 0);
+    updateStatus(); // อัปเดตจำนวนคลิก (และคะแนน ถ้ามีการลด)
+}
+// --- จบส่วนเพิ่ม handleTileClick ---
+
 
 function renderChoices() {
     choicesDiv.innerHTML = ''; // Clear previous choices
@@ -420,22 +437,18 @@ function renderChoices() {
 }
 
 function renderRandomRevealButton() {
-    // Ensure button isn't duplicated if renderChoices is called multiple times
     let revealBtn = choicesDiv.querySelector('#random-reveal-btn');
     if (!revealBtn) {
         revealBtn = document.createElement('button');
-        revealBtn.id = 'random-reveal-btn'; // Give it an ID
-        revealBtn.className = 'choice-btn'; // Use appropriate class
-        choicesDiv.appendChild(revealBtn); // Append to choices container
+        revealBtn.id = 'random-reveal-btn';
+        revealBtn.className = 'choice-btn';
+        choicesDiv.appendChild(revealBtn);
     }
 
     revealBtn.textContent = `Random Reveal (${gameData.randomReveals})`;
-    // Remove old listener before adding new one to prevent multiple triggers
-    revealBtn.replaceWith(revealBtn.cloneNode(true)); // Clone to remove listeners
-    revealBtn = choicesDiv.querySelector('#random-reveal-btn'); // Re-select the cloned button
+    revealBtn.replaceWith(revealBtn.cloneNode(true));
+    revealBtn = choicesDiv.querySelector('#random-reveal-btn');
     revealBtn.addEventListener('click', handleRandomReveal);
-
-    // Disable button if no reveals left or game not active
     revealBtn.disabled = (gameData.randomReveals <= 0 || !gameData.isActive);
 }
 
@@ -444,24 +457,22 @@ function handleRandomReveal() {
     if (gameData.randomReveals <= 0 || !gameData.isActive) return;
 
     const covers = document.querySelectorAll('.tile-cover');
-    // Filter for covers that are *not* already revealed (opacity is not '0')
     const hiddenTiles = Array.from(covers).filter(cover => cover && cover.style.opacity !== '0');
 
     if (hiddenTiles.length > 0) {
         const randomIndex = Math.floor(Math.random() * hiddenTiles.length);
         const randomTile = hiddenTiles[randomIndex];
-        randomTile.style.opacity = '0'; // Reveal the random tile
+        randomTile.style.opacity = '0';
 
         gameData.randomReveals--;
-        clicks++; // Count reveal as a click
-        score = Math.max(score - 10, 0); // Penalty for using reveal (adjust value)
+        clicks++;
+        // --- ลดคะแนนของรอบปัจจุบัน ---
+        inGameScore = Math.max(inGameScore - 10, 0); // Penalty for using reveal
 
-        // Update button text and disable if needed
-       renderRandomRevealButton(); // Re-render to update text and disabled state
-       updateStatus(); // Update score display
+       renderRandomRevealButton();
+       updateStatus(); // อัปเดต inGameScore ที่ลดลง
     } else {
          console.log("No more tiles to reveal.");
-         // Optionally disable the button permanently if all tiles are revealed
          const revealBtn = choicesDiv.querySelector('#random-reveal-btn');
          if(revealBtn) revealBtn.disabled = true;
     }

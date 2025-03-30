@@ -8,25 +8,32 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
 <body>
-    <nav>
-        <div class="logo">GuessThepic</div>
-        <ul class="nav-links">
-            <li><a href="scoreboard.html">Scoreboard</a></li>
-            <li><a href="#about">About</a></li>
-        </ul>
-        <div>
-            <span id="player-username"></span>
-            <span id="nav-scores"></span>
-            <button id="signout-btn" class="btn btn-primary">Sign Out</button>
+    <main class="main-section">
+        <nav>
+            <div class="nav-logo">
+                <h3>GT</h3>
+            </div>
+            <div class="nav-profile">
+                <i class="fa-solid fa-user" id="profile-icon"></i>
+                <div class="user-section">
+                    <span id="player-username">Name</span>
+                </div>
+                <span id="nav-scores"></span>
+                <button id="signout-btn" class="btn btn-primary">Sign Out</button>
+            </div>
+            <ul class="nav-links">
+                <li><a href="scoreboard.html">Scoreboard</a></li>
+                <li><a href="#about">About</a></li>
+            </ul>
+        </nav>
+        <div id="game-container">
+            <div id="status"></div>
+            <div id="game-grid"></div>
+            <div id="choices"></div>
+            <button id="start" style="display: none;">เริ่มเล่น</button>
+            <button id="restart" style="display: none;">เริ่มใหม่</button>
         </div>
-    </nav>
-    <div id="game-container">
-        <div id="status"></div>
-        <div id="game-grid"></div>
-        <div id="choices"></div>
-        <button id="restart" style="display: none;">เริ่มใหม่</button>
-        <button id="view-scoreboard">View Scoreboard</button>
-    </div>
+    </main>
     <script src="game.logic.js"></script>
 </body>
 </html>
