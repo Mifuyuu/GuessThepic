@@ -11,11 +11,11 @@ const signin_noti = document.getElementById('signin-noti');
 // Function to display messages
 function showSignupMessage(message, isError = false) {
     signup_noti.textContent = message;
-    signup_noti.style.color = isError ? 'red' : 'green';
+    signup_noti.style.color = isError ? '#fa4646' : '#5ae06c';
 }
 function showSigninMessage(message, isError = false) {
     signin_noti.textContent = message;
-    signin_noti.style.color = isError ? 'red' : 'green';
+    signin_noti.style.color = isError ? '#fa4646' : '#5ae06c';
 }
 
 // Function to clear messages

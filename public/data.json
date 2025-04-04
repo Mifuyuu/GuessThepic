@@ -1,6 +1,7 @@
 [
     {
         "path": "imgs/1.png",
+        "questions": "What animal is this?",
         "correct": 0,
         "choices": [
             "Mika",
@@ -15,6 +16,7 @@
     },
     {
         "path": "imgs/2.png",
+        "questions": "What animal is this?",
         "correct": 6,
         "choices": [
             "Elephant",
@@ -29,6 +31,7 @@
     },
     {
         "path": "imgs/3.png",
+        "questions": "What animal is this?",
         "correct": 2,
         "choices": [
             "Elephant",
@@ -43,6 +46,7 @@
     },
     {
         "path": "imgs/4.png",
+        "questions": "What animal is this?",
         "correct": 7,
         "choices": [
             "Kingyuan",

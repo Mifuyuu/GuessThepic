@@ -20,19 +20,21 @@ const choicesDiv = document.getElementById('choices');
 const signoutBtn = document.getElementById('signout-btn');
 const startBtn = document.getElementById('start');
 const restartBtn = document.getElementById('restart');
-
+const player_Score = document.getElementById('player-scores');
+const LeaderboardBtn = document.getElementById('leaderboad-btn');
 startBtn.addEventListener('click', initGame);
 restartBtn.addEventListener('click', initGame);
-
-// viewScoreboardBtn.addEventListener('click', () => {
-//     window.location.href = 'scoreboard.html';
-// });
 
 signoutBtn.addEventListener('click', () => {
     localStorage.removeItem('token');
     sessionStorage.removeItem('username');
     window.location.href = 'index.html';
 });
+
+LeaderboardBtn.addEventListener('click', () => {
+    window.location.href = 'scoreboard.html';
+});
+
 
 window.addEventListener('load', () => {
     const token = localStorage.getItem('token');
@@ -123,7 +125,8 @@ async function fetchPlayerData() {
             const data = await response.json();
             // --- ตรวจสอบและเก็บข้อมูล ---
             if (data && typeof data.score !== 'undefined' && typeof data.correctStreak !== 'undefined' && typeof data.mostStreak !== 'undefined') {
-                userScore = data.score; // <<< เก็บ userScore ที่ได้จาก DB
+                userScore = data.score;
+                player_Score.textContent = userScore;
                 correctStreak = data.correctStreak;
                 mostStreak = data.mostStreak;
                 console.log('Player data fetched:', { userScore, correctStreak, mostStreak });
@@ -193,7 +196,7 @@ function handleAnswer(selectedIndex) {
     } else {
         correctStreak = 0;
         // กำหนดค่า Penalty ที่จะ *หัก* ออกจาก userScore
-        let penalty = 50; // จำนวนคะแนนที่จะหัก
+        let penalty = 100; // จำนวนคะแนนที่จะหัก
         pointsChange = -penalty; // คะแนนที่เปลี่ยนแปลง (ติดลบ)
         finalScore = Math.max(userScore + pointsChange, 0); // นำไปลบออกจาก userScore เดิม (ไม่ต่ำกว่า 0)
 
@@ -376,7 +379,7 @@ async function renderGrid() { // ทำให้เป็น async ถ้าจ�
 
         const cover = document.createElement('div');
         cover.className = 'tile-cover';
-        cover.addEventListener('click', () => handleTileClick(cover)); // <<< แก้ไข: ต้องมี handleTileClick
+        // cover.addEventListener('click', () => handleTileClick(cover));
 
         tile.appendChild(imgDiv);
         tile.appendChild(cover);
@@ -386,7 +389,7 @@ async function renderGrid() { // ทำให้เป็น async ถ้าจ�
 // --- เพิ่ม handleTileClick ที่หายไป ---
 function handleTileClick(coverElement) {
     if (!gameData.isActive || coverElement.style.opacity === '0') {
-        return; // ไม่ทำงานถ้าเกมไม่ active หรือ tile เปิดอยู่แล้ว
+        return;
     }
     coverElement.style.opacity = '0';
     clicks++;
