@@ -7,15 +7,13 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const connectDB = require('./db');
 
-// --- Socket.IO Setup ---
-const http = require('http'); // Import http module
-const { Server } = require("socket.io"); // Import Server class from socket.io
-// --- End Socket.IO Setup ---
+const http = require('http');
+const { Server } = require("socket.io");
 
 const app = express();
-// --- Create HTTP server and integrate Socket.IO ---
-const server = http.createServer(app); // Create HTTP server using Express app
-const io = new Server(server, { // Attach Socket.IO to the HTTP server
+
+const server = http.createServer(app);
+const io = new Server(server, {
     cors: {
         // origin: "http://localhost:YOUR_FRONTEND_PORT", // <<< ระบุ Origin ของ Frontend (ถ้าแยก Port หรือ domain)
         origin: "*", // อนุญาตทุก Origin (สะดวกสำหรับการทดสอบ แต่ไม่ปลอดภัยสำหรับ Production)
@@ -25,7 +23,7 @@ const io = new Server(server, { // Attach Socket.IO to the HTTP server
 // --- End Create HTTP server ---
 
 app.use(express.json());
-app.use(cors()); // CORS for regular HTTP requests
+app.use(cors());
 
 connectDB();
 
@@ -36,12 +34,7 @@ app.get('/socket.io/socket.io.js', (req, res) => {
   res.sendFile(path.join(__dirname, '../node_modules/socket.io/client-dist/socket.io.js'));
 });
 
-
-// app.get('/api/port', (req, res) => {
-//     res.json({ port: process.env.PORT || 3000 });
-// });
-
-const secretKey = process.env.JWT_SECRET || 'your_secret_key'; // ควรตั้งค่าใน .env
+const secretKey = process.env.JWT_SECRET || 'your_secret_key';
 
 // User Schema and Model
 const userSchema = new mongoose.Schema({
@@ -128,11 +121,8 @@ app.post('/api/register', async (req, res) => {
         if (password.length < 8) {
             return res.status(400).send('Password must be at least 8 characters long.');
         }
-        if (username.length < 3) {
-            return res.status(400).send('Username must be at least 3 characters long.');
-        }
-        if (username.length > 20) {
-            return res.status(400).send('Username must be at most 20 characters long.');
+        if (username.length < 3 || username.length > 12) {
+            return res.status(400).send('Username must be between 3 to 12 characters long.');
         }
         const user = new User({ username, password });
         await user.save();

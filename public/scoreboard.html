@@ -3,16 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scoreboard</title>
+    <title>GuessThepic</title>
+    <link rel="icon" href="imgs/guessthepic-icon.png" type="image/x-icon">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-    <!-- Include Socket.IO Client Library (served by the server) -->
     <script src="/socket.io/socket.io.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
         /* --- Basic Reset & Body --- */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Roboto', 'Prompt', sans-serif;
         }
 
         body {
@@ -22,7 +25,6 @@
             /* min-height: 100vh; */
             padding: 20px;
             background-color: #f0f2f5;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #333;
         }
 
@@ -37,10 +39,17 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
-        h1 {
-            margin-bottom: 25px;
-            color: #1a237e;
-            font-weight: 700;
+        .lb-header-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+            color: #721ae6;
+            h2 {
+                font-size: 1.8rem;
+                font-weight: 700;
+            }
         }
 
         /* --- Controls --- */
@@ -107,19 +116,17 @@
 
         /* Style for when a row is being removed (optional fade-out) */
         .scoreboard-row.removing {
-            opacity: 0;
-            /* Optionally move it out */
-            /* transform: translateX(-100%); */
+            opacity: 0; /* Fade out */
+
         }
 
         /* Style for user highlight */
         .scoreboard-row.user-highlight {
              /* border: 2px solid #ffeb3b; */
-             outline: 3px solid #ffd700; /* Use outline instead of border */
+             outline: 3px solid #8400ff; /* Use outline instead of border */
              outline-offset: -2px; /* Adjust offset */
-             box-shadow: 0 0 10px rgba(255, 235, 59, 0.6);
+             box-shadow: 0 0 10px rgba(134, 59, 255, 0.6);
         }
-
 
         .scoreboard-row span:first-child { /* Rank + Username */
             font-size: 1.05rem;
@@ -190,24 +197,33 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
-        /* --- Rank Colors --- */
-        .rank-1 { --color: #ffc107; color: #424242;} /* Gold */
+        /* --- Rank Colors Default --- */
+        .rank-1 { --color: #ffc107; color: #424242;}
+        .rank-2 { --color: #e0e0e0; color: #424242;}
+        .rank-3 { --color: #d8a477; }
+        .rank-4 { --color: #81c784; }
+        .rank-5 { --color: #64b5f6; }
+        .rank-6 { --color: #ffb74d; }
+        .rank-7 { --color: #e57373; }
+        .rank-8 { --color: #9575cd; }
+        .rank-9 { --color: #78909c; }
+        .rank-10 { --color: #4dd0e1; }
+        .user-rank-outside { --color: #7e57c2; }
+
+        /* --- Rank Colors Custom--- */
+        .rank-1 { --color: #ffd34d; color: #424242;} /* Gold */
         .rank-2 { --color: #e0e0e0; color: #424242;} /* Silver */
         .rank-3 { --color: #d8a477; } /* Bronze */
-        .rank-4 { --color: #81c784; } /* Green */
-        .rank-5 { --color: #64b5f6; } /* Blue */
-        .rank-6 { --color: #ffb74d; } /* Orange */
-        .rank-7 { --color: #e57373; } /* Red */
-        .rank-8 { --color: #9575cd; } /* Purple */
-        .rank-9 { --color: #78909c; } /* Blue Grey */
-        .rank-10 { --color: #4dd0e1; } /* Cyan */
+        .rank-4, .rank-5, .rank-6, .rank-7, .rank-8, .rank-9, .rank-10 { --color: #3a3a3a; } /* Green */
         .user-rank-outside { --color: #7e57c2; } /* Specific color for user outside top 10 */
-
     </style>
 </head>
 <body>
     <div id="scoreboard-container">
-        <h1>Scoreboard</h1>
+        <div class="lb-header-section">
+            <i class="fa-solid fa-trophy fa-2x"></i>
+            <h1>Leaderboard</h1>
+        </div>
 
         <div id="sort-controls">
             <label for="sort-by">Sort By:</label>
@@ -218,12 +234,10 @@
         </div>
 
         <div id="leaderboard">
-            <!-- Scoreboard rows will be dynamically added/updated here -->
             <p class="status-message" id="status-message" style="display:none;">Loading...</p>
         </div>
 
         <div id="user-rank" style="display:none;">
-            <!-- User's rank text will be set here -->
         </div>
 
         <button id="back-to-game">Back to Game</button>
