@@ -18,7 +18,6 @@ const gameGridDiv = document.getElementById('game-grid');
 const choicesDiv = document.getElementById('choices');
 const signoutBtn = document.getElementById('signout-btn');
 const startBtn = document.getElementById('start');
-const restartBtn = document.getElementById('restart');
 
 const playerUsernameSpan = document.getElementById('player-username');
 const playerScoresSpan = document.getElementById('player-scores');
@@ -28,7 +27,6 @@ const mostStreakSpan = document.getElementById('most-streak');
 const LeaderboardBtn = document.getElementById('leaderboad-btn');
 
 startBtn.addEventListener('click', initGame);
-restartBtn.addEventListener('click', initGame);
 
 signoutBtn.addEventListener('click', () => {
     localStorage.removeItem('token');
@@ -164,6 +162,16 @@ window.addEventListener('load', async () => {
 
 });
 
+
+async function onRest() {
+    gameGridDiv.innerHTML = '';
+    choicesDiv.innerHTML = '';
+    statusDiv.textContent = '';
+    startBtn.style.display = 'flex';
+    timeLeftSpan.textContent = 'N/A';
+    clearInterval(gameData.timer);
+    console.log('Resting...');
+}
 // --- Core Game Logic ---
 async function initGame() {
     console.log('Initializing game...');
@@ -176,7 +184,7 @@ async function initGame() {
     clearInterval(gameData.timer); // เคลียร์ timer เก่า (ถ้ามี)
 
     startBtn.style.display = 'none';
-    restartBtn.style.display = 'none';
+    // restartBtn.style.display = 'none';
     choicesDiv.innerHTML = ''; // Clear choices from previous round
     gameGridDiv.innerHTML = 'Loading image...'; // Show loading message in grid
     statusDiv.textContent = 'Loading game data...'; // Update status
@@ -220,7 +228,7 @@ async function initGame() {
         choicesDiv.innerHTML = '';
         gameData.isActive = false;
         clearInterval(gameData.timer);
-        restartBtn.style.display = 'flex'; // แสดงปุ่มเริ่มใหม่เมื่อมีข้อผิดพลาด
+        // restartBtn.style.display = 'flex';
     }
 }
 
@@ -290,7 +298,7 @@ function updateSideMenuUI() {
     // playerScoresSpan.textContent = userScore; // อาจจะซ้ำซ้อน ถ้าอัปเดตที่อื่นแล้ว
     streakSpan.textContent = correctStreak;
     mostStreakSpan.textContent = mostStreak;
-    playerUsernameSpan.textContent = username; // เผื่อมีการเปลี่ยนแปลง (ไม่น่ามี)
+    playerUsernameSpan.textContent = username;
 }
 
 
@@ -299,35 +307,107 @@ function handleAnswer(selectedIndex) {
         return;
     }
 
-    gameData.isActive = false; // หยุดเกม
-    clearInterval(gameData.timer); // หยุดเวลา
+    gameData.isActive = false;
+    clearInterval(gameData.timer);
 
-    const baseScoreCorrect = 100; // คะแนนพื้นฐานเมื่อตอบถูก
-    const timeBonus = gameData.timeLeft >= 20 ? 50 : gameData.timeLeft >= 10 ? 25 : 0; // โบนัสเวลา
-    const penaltyWrong = 100; // คะแนนที่หักเมื่อตอบผิด (ปรับค่าตามต้องการ)
+    const baseScoreCorrect = 100;
+    const timeBonus = gameData.timeLeft >= 20 ? 50 : gameData.timeLeft >= 10 ? 25 : 0;
+    const penaltyWrong = 100;
 
-    let finalScore = userScore; // คะแนนรวมสุดท้าย เริ่มต้นด้วยคะแนนปัจจุบัน
-    let pointsChange = 0; // คะแนนที่เปลี่ยนแปลงในรอบนี้
-    let message = ''; // ข้อความแสดงผล (อาจจะใช้หรือไม่ใช้)
+    let finalScore = userScore;
+    let pointsChange = 0;
+    let message = '';
 
     if (selectedIndex === currentImage.correct) {
-        // --- ตอบถูก ---
+
         correctStreak++;
         if (correctStreak > mostStreak) {
             mostStreak = correctStreak;
         }
-        const scoreMultiplier = 1 + (0.1 * correctStreak); // ตัวคูณตาม streak
-        pointsChange = Math.round((baseScoreCorrect + timeBonus) * scoreMultiplier); // คะแนนที่ได้ในรอบนี้
-        finalScore = userScore + pointsChange; // บวกเพิ่มเข้าไปในคะแนนรวม
+        const scoreMultiplier = 1 + (0.1 * correctStreak);
+        pointsChange = Math.round((baseScoreCorrect + timeBonus) * scoreMultiplier);
+        finalScore = userScore + pointsChange;
 
-        message = `🎉 Correct! +${pointsChange} Points`; // สร้างข้อความ (อาจจะแสดงที่อื่น)
+        var count = 200;
+        var defaults = {
+        origin: { y: 0.8 },
+        zIndex: 9999
+        };
+
+        function fire(particleRatio, opts) {
+        confetti({
+            ...defaults,
+            ...opts,
+            particleCount: Math.floor(count * particleRatio)
+        });
+        }
+
+        fire(0.25, {
+        spread: 26,
+        startVelocity: 55,
+        });
+        fire(0.2, {
+        spread: 60,
+        });
+        fire(0.35, {
+        spread: 100,
+        decay: 0.91,
+        scalar: 0.8
+        });
+        fire(0.1, {
+        spread: 120,
+        startVelocity: 25,
+        decay: 0.92,
+        scalar: 1.2
+        });
+        fire(0.1, {
+        spread: 120,
+        startVelocity: 45,
+        });
+
+        Swal.fire({
+            theme: "dark",
+            title: "YOU WIN!",
+            text: `🎉 ยินดีด้วย! คุณตอบถูก! +${pointsChange} คะแนน`,
+            icon: "success",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Play Again"
+        }).then((result) => {
+            if (result.isConfirmed) {
+              initGame();
+            }
+            if (result.isDismissed) {
+              onRest();
+            }
+        });
+        message = `🎉 Correct! +${pointsChange} Points`;
         console.log(message, `New Total: ${finalScore}, Streak: ${correctStreak}`);
 
     } else {
-        // --- ตอบผิด ---
-        correctStreak = 0; // รีเซ็ต streak
-        pointsChange = -penaltyWrong; // คะแนนที่เสียไป
-        finalScore = Math.max(userScore + pointsChange, 0); // ลบคะแนน (ไม่ต่ำกว่า 0)
+
+        correctStreak = 0;
+        pointsChange = -penaltyWrong;
+        finalScore = Math.max(userScore + pointsChange, 0);
+
+        Swal.fire({
+            theme: "dark",
+            title: "YOU LOSE!",
+            text: `💩 เสียใจด้วยคุณตอบผิดนะ -${penaltyWrong} คะแนน`,
+            icon: "error",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Play Again"
+        }).then((result) => {
+            if (result.isConfirmed) {
+              initGame();
+            }
+            if (result.isDismissed) {
+                onRest();
+            }
+        });
 
         message = `❌ Wrong! -${penaltyWrong} Points. Correct: ${currentImage.choices[currentImage.correct]}`;
         console.log(message, `New Total: ${finalScore}, Streak: 0`);
@@ -343,7 +423,7 @@ function handleAnswer(selectedIndex) {
     saveScoreToServer(userScore, correctStreak, mostStreak); // ส่งค่าที่อัปเดตแล้วไป
 
     revealAllTiles(); // เปิดภาพทั้งหมด
-    restartBtn.style.display = 'flex'; // แสดงปุ่มเริ่มใหม่
+    // restartBtn.style.display = 'flex';
 }
 
 async function saveScoreToServer(finalScoreToSave, currentCorrectStreak, currentMostStreak) {
@@ -403,28 +483,42 @@ function startTimer() {
 }
 
 function handleTimeout() {
-    if (!gameData.isActive) return; // ป้องกันการทำงานซ้ำซ้อน
+    if (!gameData.isActive) return;
     gameData.isActive = false;
 
     console.log("Time's up!");
-    const timeOutPenalty = 100; // คะแนนที่หักเมื่อหมดเวลา
-    correctStreak = 0; // รีเซ็ต streak
+    const timeOutPenalty = 100;
+    correctStreak = 0;
 
-    let finalScore = Math.max(userScore - timeOutPenalty, 0); // คำนวณคะแนนใหม่
+    let finalScore = Math.max(userScore - timeOutPenalty, 0);
 
-    // --- อัปเดตค่าใน Client และ UI ---
     userScore = finalScore;
     playerScoresSpan.textContent = userScore;
     streakSpan.textContent = correctStreak;
-    // mostStreak ไม่เปลี่ยนเมื่อหมดเวลา
+
+    Swal.fire({
+        theme: "dark",
+        title: "TIME 'S UP!",
+        text: `⏳ เสียใจด้วย หมดเวลาแล้วนะ -${timeOutPenalty} คะแนน`,
+        icon: "error",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Play Again"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            initGame();
+        }
+        if (result.isDismissed) {
+            onRest();
+        }
+    });
 
     console.log(`⏳ Time's up! -${timeOutPenalty} Points. New Total: ${finalScore}. Correct was: ${currentImage.choices[currentImage.correct]}`);
 
-    // --- บันทึกคะแนน/Streak ลง Server ---
     saveScoreToServer(userScore, correctStreak, mostStreak);
 
     revealAllTiles();
-    restartBtn.style.display = 'flex'; // แสดงปุ่มเริ่มใหม่
 }
 
 
@@ -445,7 +539,7 @@ function revealAllTiles() {
 
 async function renderGrid() {
     const grid = document.getElementById('game-grid');
-    grid.innerHTML = ''; // Clear previous grid
+    grid.innerHTML = '';
     grid.style.backgroundImage = '';
 
     if (!currentImage || !currentImage.path) {
@@ -454,7 +548,6 @@ async function renderGrid() {
         return;
     }
 
-    // --- คำนวณขนาดและตำแหน่ง (เหมือนเดิม) ---
     let tileWidth = 100;
     let tileHeight = 100;
     let gap = 10;
@@ -505,7 +598,8 @@ async function renderGrid() {
     for (let i = 0; i < numCols * numRows; i++) {
         const tile = document.createElement('div');
         tile.className = 'tile';
-        tile.style.cursor = 'pointer'; // เปลี่ยน cursor เมื่อเอาเมาส์ไปชี้
+        // เปลี่ยน cursor เมื่อเอาเมาส์ไปชี้
+        // tile.style.cursor = 'pointer';
 
         const imgDiv = document.createElement('div');
         imgDiv.className = 'tile-img';
@@ -585,36 +679,31 @@ function renderChoices() {
 }
 
 function renderRandomRevealButton() {
-    let revealBtn = choicesDiv.querySelector('#random-reveal-btn');
-    if (!revealBtn) {
-        revealBtn = document.createElement('button');
-        revealBtn.id = 'random-reveal-btn';
-        revealBtn.className = 'choice-btn btn btn-info'; // เพิ่ม class btn
-        choicesDiv.appendChild(revealBtn); // เพิ่มปุ่มเข้าไปใน choicesDiv
+    let revealBtn = document.querySelector('#random-reveal-btn');
 
-        // ใช้ event delegation หรือ attach listener ใหม่หลังสร้างปุ่ม
-         revealBtn.addEventListener('click', handleRandomReveal);
+    if (!revealBtn) {
+        revealBtn = document.createElement('div');
+        revealBtn.id = 'random-reveal-btn';
+        revealBtn.className = 'btn btn-primary';
+        choicesDiv.appendChild(revealBtn);
+        revealBtn.addEventListener('click', handleRandomReveal);
     } else {
-        // ถ้าปุ่มมีอยู่แล้ว แค่อัปเดตข้อความและสถานะ
-        // ต้องแน่ใจว่า listener ไม่ถูกผูกซ้ำซ้อน อาจจะต้องลบ listener เก่าก่อนถ้าไม่ชัวร์
-        // หรือวิธีที่ง่ายกว่าคือสร้างปุ่มใหม่เสมอตามโค้ดเดิม (แต่ต้องจัดการ listener)
-        // ลองวิธี update ปุ่มเดิม
-         const newBtn = revealBtn.cloneNode(true); // โคลนปุ่ม
-         revealBtn.parentNode.replaceChild(newBtn, revealBtn); // แทนที่ปุ่มเก่าด้วยปุ่มใหม่ (จะลบ listener เก่า)
-         newBtn.addEventListener('click', handleRandomReveal); // ผูก listener กับปุ่มใหม่
-         revealBtn = newBtn; // อ้างอิงตัวแปรไปยังปุ่มใหม่
+        const newBtn = revealBtn.cloneNode(true);
+        revealBtn.parentNode.replaceChild(newBtn, revealBtn);
+        newBtn.addEventListener('click', handleRandomReveal);
+        revealBtn = newBtn;
     }
 
-
-    revealBtn.textContent = `Random Reveal (${gameData.randomReveals})`;
+    revealBtn.innerHTML = `<i class="fa-solid fa-puzzle-piece"></i> Random Open (${gameData.randomReveals})`;
     revealBtn.disabled = (gameData.randomReveals <= 0 || !gameData.isActive);
 }
+
 
 
 function handleRandomReveal() {
     if (gameData.randomReveals <= 0 || !gameData.isActive) return;
 
-    const hiddenTiles = document.querySelectorAll('.tile-cover[style*="opacity: 1"]'); // หา cover ที่ยังทึบอยู่
+    const hiddenTiles = document.querySelectorAll('.tile-cover[style*="opacity: 1"]');
 
     if (hiddenTiles.length > 0) {
         const randomIndex = Math.floor(Math.random() * hiddenTiles.length);

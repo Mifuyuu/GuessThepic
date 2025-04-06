@@ -1,7 +1,7 @@
 [
     {
         "path": "imgs/1.png",
-        "questions": "What animal is this?",
+        "questions": "Character นี้มีชื่อว่าอะไร?",
         "correct": 0,
         "choices": [
             "Mika",

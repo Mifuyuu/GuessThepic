@@ -9,15 +9,20 @@
     <link rel="stylesheet" href="assets/background.main.css">
     <link rel="icon" href="imgs/guessthepic-icon.png" type="image/x-icon">
      <style>
-        body {
+        .container {
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #1d1d1d;
+            width: 100vw;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 2;
         }
         #auth-container {
-            z-index: 1;
+            z-index: 3;
+            position: fixed;
             background-color: var(--dark-color);
             color: #fff;
             display: flex;
@@ -60,22 +65,25 @@
 <body>
     <div id="particles-background" class="vertical-centered-box"></div>
     <div id="particles-foreground" class="vertical-centered-box"></div>
-    <div id="auth-container">
-        <div class="left-sec">
-            <h2>Sign Up</h2>
-            <input type="text" id="signup-username" placeholder="Username">
-            <input type="password" id="signup-password" placeholder="Password">
-            <button id="signup-btn" class="btn btn-primary">Sign Up</button>
-            <div id="signup-noti"></div>
+    <main class="container">
+        <div id="auth-container">
+            <div class="left-sec">
+                <h2>Sign Up</h2>
+                <input type="text" id="signup-username" placeholder="Username">
+                <input type="password" id="signup-password" placeholder="Password">
+                <button id="signup-btn" class="btn btn-primary">Sign Up</button>
+                <div id="signup-noti"></div>
+            </div>
+            <div class="right-sec">
+                <h2>Sign In</h2>
+                <input type="text" id="signin-username" placeholder="Username">
+                <input type="password" id="signin-password" placeholder="Password">
+                <button id="signin-btn" class="btn btn-primary">Sign In</button>
+                <div id="signin-noti"></div>
+            </div>
         </div>
-        <div class="right-sec">
-            <h2>Sign In</h2>
-            <input type="text" id="signin-username" placeholder="Username">
-            <input type="password" id="signin-password" placeholder="Password">
-            <button id="signin-btn" class="btn btn-primary">Sign In</button>
-            <div id="signin-noti"></div>
-        </div>
-    </div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="assets/background.min.js"></script>
     <script src="index.logic.js"></script>
 </body>

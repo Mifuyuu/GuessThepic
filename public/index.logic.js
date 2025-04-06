@@ -103,11 +103,19 @@ signinBtn.addEventListener('click', async () => {
 
             localStorage.setItem('token', token);
             sessionStorage.setItem('username', responseUsername); // ใช้ username จาก response
-            showSigninMessage('Sign in successful! Redirecting...', false);
-            // Redirect after a short delay to show the message
+            // showSigninMessage('Sign in successful! Redirecting...', false);
+            Swal.fire({
+                // position: "top-end",
+                icon: "success",
+                title: "Sign in successful! Redirecting...",
+                showConfirmButton: false,
+                timer: 1500,
+                theme: "dark"
+            });
+
             setTimeout(() => {
                  window.location.href = 'game.html'; // Ensure game.html exists
-            }, 1000);
+            }, 2000);
 
         } else { // Status 4xx, 5xx
             const errorMessage = await response.text(); // อ่าน text error

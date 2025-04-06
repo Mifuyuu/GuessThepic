@@ -8,87 +8,101 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="assets/background.main.css">
     <link rel="icon" href="imgs/guessthepic-icon.png" type="image/x-icon">
+    <style>
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 2;
+        }
+    </style>
 </head>
 <body>
     <div id="particles-background" class="vertical-centered-box"></div>
     <div id="particles-foreground" class="vertical-centered-box"></div>
-    <main class="main-section">
-        <nav class="side-menu">
-            <div class="menu-top-section">
-                <div class="menu-item backgrou">
-                    <div class="item-content">
-                        <span id="player-username">Username</span>
+    <main class="container">
+        <main class="main-section">
+            <nav class="side-menu">
+                <div class="menu-top-section">
+                    <div class="menu-item backgrou">
+                        <div class="item-content">
+                            <span id="player-username">Null</span>
+                        </div>
+                    </div>
+                    <div class="menu-item backgrou-left">
+                        <div class="item-content">
+                            <i class="fa-solid fa-coins"></i>
+                            <span id="player-scores" class="bg-dark">N/A</span>
+                        </div>
+                    </div>
+                    <div class="menu-item backgrou-left">
+                        <div class="item-content">
+                            <i class="fa-solid fa-hourglass-start"></i>
+                            <span><span id="time-left" class="bg-dark">N/A</span>s</span>
+                        </div>
+                    </div>
+                    <div class="menu-item backgrou-left">
+                        <div class="item-content">
+                            <i class="fa-solid fa-bolt"></i>
+                            <span>Streak :</span>
+                            <span id="streak" class="bg-dark">N/A</span>
+                        </div>
+                    </div>
+                    <div class="menu-item backgrou-left">
+                        <div class="item-content">
+                            <i class="fa-solid fa-fire"></i>
+                            <span>Most Streak :</span>
+                            <span id="most-streak" class="bg-dark">N/A</span>
+                        </div>
                     </div>
                 </div>
-                <!-- <div class="menu-item backgrou-left">
-                    <div class="item-content">
-                        <span>Game Score:</span>
-                        <span id="ingame-score" class="bg-dark">0</span>
+                <div class="menu-bottom-section">
+                    <div class="menu-item gold" id="leaderboad-btn">
+                        <div class="item-content">
+                            <i class="fa-solid fa-trophy"></i>
+                            <span>Leaderboard</span>
+                        </div>
                     </div>
-                </div> -->
-                <div class="menu-item backgrou-left">
-                    <div class="item-content">
-                        <i class="fa-solid fa-coins"></i>
-                        <span id="player-scores" class="bg-dark">0</span>
+                    <div class="menu-item blue" id="game-rules-btn">
+                        <div class="item-content">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <span>FAQ</span>
+                        </div>
                     </div>
-                </div>
-                <div class="menu-item backgrou-left">
-                    <div class="item-content">
-                        <span>Time Left : <span id="time-left" class="bg-dark">00:00</span>s</span>
-                    </div>
-                </div>
-                <div class="menu-item backgrou-left">
-                    <div class="item-content">
-                        <span>Streak :</span>
-                        <span id="streak" class="bg-dark">0</span>
+                    <div class="menu-item danger" id="signout-btn">
+                        <div class="item-content">
+                            <i class="fa-solid fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                        </div>
                     </div>
                 </div>
-                <div class="menu-item backgrou-left">
-                    <div class="item-content">
-                        <span>Most Streak :</span>
-                        <span id="most-streak" class="bg-dark">0</span>
+            </nav>
+            <div id="game-container">
+                <div class="game-status">
+                    <div id="start" style="display: none;">
+                        <div class="btn btn-primary">
+                            <i class="fa-solid fa-play"></i>
+                            <span>เริ่มเล่น</span>
+                        </div>
                     </div>
+                    <div id="status"></div>
+                </div>
+                <div id="game-grid"></div>
+                <div class="game-menu">
+                    <div id="choices"></div>
+                    <!-- <div id="restart" class="" style="display: none;">เริ่มใหม่</div> -->
                 </div>
             </div>
-            <div class="menu-bottom-section">
-                <div class="menu-item gold" id="leaderboad-btn">
-                    <div class="item-content">
-                        <i class="fa-solid fa-trophy"></i>
-                        <span>Leaderboard</span>
-                    </div>
-                </div>
-                <div class="menu-item blue" id="game-rules-btn">
-                    <div class="item-content">
-                        <i class="fa-solid fa-question-circle"></i>
-                        <span>FAQ</span>
-                    </div>
-                </div>
-                <div class="menu-item danger" id="signout-btn">
-                    <div class="item-content">
-                        <i class="fa-solid fa-sign-out-alt"></i>
-                        <span>Logout</span>
-                    </div>
-                </div>
-            </div>
-        </nav>
-        <div id="game-container">
-            <div class="game-status">
-                <div id="start" style="display: none;">
-                    <div class="btn btn-primary">
-                        <i class="fa-solid fa-play"></i>
-                        <span>เริ่มเล่น</span>
-                    </div>
-                </div>
-                <div id="status"></div>
-            </div>
-            <div id="game-grid"></div>
-            <div class="game-menu">
-                <div id="choices"></div>
-                <button id="restart" class="btn btn-primary" style="display: none;">เริ่มใหม่</button>
-            </div>
-        </div>
+        </main>
     </main>
     <script src="assets/background.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="game.logic.js"></script>
 </body>
 </html>
