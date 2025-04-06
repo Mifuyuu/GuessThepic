@@ -1,10 +1,9 @@
-// --- DOM Element References ---
 const sortBySelect = document.getElementById('sort-by');
 const leaderboardDiv = document.getElementById('leaderboard');
-const userRankDiv = document.getElementById('user-rank'); // Summary div
+const userRankDiv = document.getElementById('user-rank');
 const statusMessage = document.getElementById('status-message');
 const backToGameButton = document.getElementById('back-to-game');
-const USER_OUTSIDE_ROW_ID = 'user-rank-outside-row'; // Constant for the ID
+const USER_OUTSIDE_ROW_ID = 'user-rank-outside-row';
 
 // --- State Variables ---
 let playerElements = new Map(); // Map: username -> { element: HTMLElement, data: Object, currentRank: number }
@@ -15,9 +14,18 @@ let isFetchingLeaderboard = false;
 // --- Socket.IO Client Setup ---
 const socket = io({ /* auth: { token: token } */ });
 
+// --- Debugging Functionality ---
+const debug = false;
+const prefix = "[DEBUG] ";
+
+const log = (msg) => debug && console.log(prefix + msg);
+const warn = (msg) => debug && console.warn(prefix + msg);
+const err = (msg) => debug && console.error(prefix + msg);
+// --- End Debugging Functionality ---
+
 socket.on('connect', () => console.log('Socket.IO Connected:', socket.id));
 socket.on('scoreUpdated', () => {
-    console.log('Received "scoreUpdated" event.');
+    log('Received "scoreUpdated" event.');
     requestLeaderboardUpdate();
 });
 socket.on('disconnect', (reason) => {
@@ -35,12 +43,12 @@ function setStatusMessage(message, type = 'info') {
     statusMessage.textContent = message;
     statusMessage.className = `status-message status-${type}`;
     statusMessage.style.display = 'block';
-    leaderboardDiv.querySelectorAll('.scoreboard-row').forEach(el => el.style.opacity = '0'); // Hide rows
-    userRankDiv.style.display = 'none'; // Hide summary div as well
+    leaderboardDiv.querySelectorAll('.scoreboard-row').forEach(el => el.style.opacity = '0');
+    userRankDiv.style.display = 'none';
 }
 
 function formatRank(rank) {
-    if (rank === null || rank === undefined || rank <= 0) return ''; // Handle invalid ranks
+    if (rank === null || rank === undefined || rank <= 0) return '';
     const j = rank % 10, k = rank % 100;
     if (j == 1 && k != 11) return rank + "st";
     if (j == 2 && k != 12) return rank + "nd";
@@ -254,27 +262,23 @@ function handleUserOutsideTop10(userData, top10Usernames, sortBy) {
             console.log(` -> Updating special row for user ${currentUsername} (Rank ${userData.rank})`);
         }
 
-        // Update content regardless of creation/update
         userRowOutside.innerHTML = `
                       <span>${rankString}. ${currentUsername}</span> <!-- Show formatted rank -->
                       <span>${userValue}</span>
                  `;
-        // Ensure it's visible (might have been hidden during loading)
         userRowOutside.style.opacity = '1';
 
-    } else if (userRowOutside) { // Remove if exists but shouldn't be shown
-        console.log(` -> Removing special row for user ${currentUsername}`);
+    } else if (userRowOutside) {
+        log(` -> Removing special row for user ${currentUsername}`);
         userRowOutside.remove();
     }
 }
 
-
-// --- Initial Load ---
 window.addEventListener('load', () => {
     currentUsername = sessionStorage.getItem('username');
     const currentToken = localStorage.getItem('token');
     if (currentToken && currentUsername) {
-        requestLeaderboardUpdate(); // Initial fetch
+        requestLeaderboardUpdate();
     } else {
         console.log('Auth missing on load. Redirecting.');
         window.location.href = 'index.html';
