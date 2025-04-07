@@ -1,11 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     font-family: 'Roboto', 'Prompt', sans-serif;
 }
+
 .container {
     display: flex;
     justify-content: center;
@@ -17,6 +19,7 @@
     left: 0;
     z-index: 2;
 }
+
 #scoreboard-container {
     z-index: 1;
     width: 100%;
@@ -27,7 +30,11 @@
     padding: 30px;
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
+
 .lb-header-section {
     display: flex;
     align-items: center;
@@ -40,6 +47,7 @@
         font-size: 1.8rem;
         font-weight: 700;
  }
+
 /* --- Controls --- */
 #sort-controls {
      display: flex;
@@ -47,11 +55,12 @@
      align-items: center;
      margin-bottom: 25px;
      gap: 15px;
+     flex-shrink: 0;
 }
 #sort-controls label {
     font-weight: 500;
     color: #ffffff;
-    white-space: nowrap; /* Prevent label wrapping */
+    white-space: nowrap;
 }
 #sort-by {
     padding: 10px 15px;
@@ -62,35 +71,63 @@
     background-color: #fff;
     cursor: pointer;
 }
+
 /* --- Leaderboard Area --- */
 #leaderboard {
     position: relative;
-    /* height: calc((var(--team-height, 55px) + var(--team-spacing, 8px)) * 11 + 10px); */
-    height: 420px;
+    /* Calculate max height based on container padding, header, controls, user rank (if shown), and button */
+    /* This needs careful adjustment based on final layout */
+    /* Example calculation: 735px (max container) - 30px*2 (padding) - 50px (header approx) - 60px (controls approx) - 60px (button approx) - 20px (margin) */
+    /* flex-grow: 1; */ /* Allows leaderboard to take available space */
+    height: 420px; /* Fixed height might be simpler */
+    overflow-y: scroll; /* Enable scrolling if content exceeds height */
     overflow-x: hidden;
-    overflow-y: scroll;
-    scrollbar-width: none;
+    scrollbar-width: thin; /* For Firefox */
+    scrollbar-color: #af6ef8 #444; /* For Firefox */
     width: 100%;
     margin-bottom: 20px;
     border-radius: 5px;
+    flex-shrink: 1; /* Allow shrinking if needed, but should grow */
 }
+
+/* Webkit scrollbar styling */
+#leaderboard::-webkit-scrollbar {
+    border-radius: 10px;
+    width: 8px;
+}
+#leaderboard::-webkit-scrollbar-track {
+    background: #444;
+    border-radius: 4px;
+}
+#leaderboard::-webkit-scrollbar-thumb {
+    background-color: #af6ef8;
+    border-radius: 4px;
+    border: 2px solid #444;
+}
+
+
 /* --- Individual Scoreboard Row --- */
 :root {
     --team-height: 55px;
     --team-spacing: 8px;
+    --transition-duration: 500ms; /* Define duration in one place */
 }
 .scoreboard-row {
     position: absolute;
-    width: 100%;
+    width: 100%; /* Use 100% to account for padding */
+    box-sizing: border-box; /* Include padding in width calculation */
     height: var(--team-height);
     background: var(--color, #607d8b); /* Default color, overridden by rank */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
     left: 0;
-    /* Position based on --i and Animate 'top' */
+    /* Position based on --i and Animate 'top', 'opacity', 'transform' */
     top: calc(var(--i, 0) * (var(--team-height) + var(--team-spacing)));
-    transition: top 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55),
-                opacity 300ms ease-out,
-                background-color 300ms ease;
+    opacity: 1;
+    transform: scale(1); /* Start at normal scale */
+    transition: top var(--transition-duration) cubic-bezier(0.68, -0.55, 0.265, 1.55),
+                opacity calc(var(--transition-duration) / 2) ease-out, /* Make opacity fade faster */
+                transform var(--transition-duration) ease,
+                background-color calc(var(--transition-duration) / 2) ease;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -98,30 +135,36 @@
     padding: 0 20px;
     color: #fff;
     font-weight: 500;
-    opacity: 1;
+}
+
+/* --- Animation States --- */
+.scoreboard-row.entering {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95); /* Start slightly below and smaller */
 }
 
 .scoreboard-row.removing {
     opacity: 0;
-    transition: 
-        top 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55),
-        opacity 300ms ease-out,
-        transform 300ms ease-out;
+    transform: scale(0.9); /* Shrink slightly when disappearing */
+    /* Let the transition handle the fade out and shrink */
+    pointer-events: none; /* Prevent interaction during removal animation */
 }
 
+
+/* --- User Highlight --- */
 .scoreboard-row.user-highlight {
      outline: 3px solid #8400ff;
      outline-offset: -2px;
      box-shadow: 0 0 10px rgba(134, 59, 255, 0.6);
 }
-/* Style specifically for the user's row when outside top 10 */
 .scoreboard-row.user-rank-outside {
-    /* Different highlight or background */
-    outline: 3px solid #03a9f4; /* Example: Light blue outline */
+    outline: 3px solid #03a9f4;
     outline-offset: -2px;
     box-shadow: 0 0 8px rgba(3, 169, 244, 0.5);
     /* Use the specific --color defined below */
 }
+
+/* --- Content Spans --- */
 .scoreboard-row span:first-child { /* Rank + Username */
     font-size: 1.05rem;
     white-space: nowrap;
@@ -137,40 +180,48 @@
     text-align: right;
     flex-shrink: 0; /* Don't shrink value */
 }
+
 /* --- Status Messages (Loading/Error/Empty) --- */
 .status-message {
-    position: absolute;
+    position: absolute; /* Position relative to #leaderboard */
     top: 40%;
     left: 50%;
     transform: translate(-50%, -50%);
     font-style: italic;
-    color: #777;
+    color: #aaa; /* Lighter color for status */
     font-size: 1rem;
     padding: 20px;
     text-align: center;
     width: 80%;
+    z-index: 10; /* Ensure it's above rows during loading */
 }
 .status-error { color: #e53935; }
 .status-warning { color: #f9a825; }
 .status-info { color: #ffffff; }
-/* --- User Rank Display (Separate Div - Less critical now) --- */
+
+/* --- User Rank Display (Separate Div) --- */
 #user-rank {
-    /* This div might become redundant if the 11th row covers its purpose */
-    /* Or keep it for summary */
-    margin-top: 20px;
+    margin-top: 10px; /* Reduced margin */
     font-weight: 600;
-    background-color: #e8eaf6;
-    color: #3f51b5;
-    padding: 12px 18px;
+    background-color: rgba(232, 234, 246, 0.1); /* Semi-transparent */
+    color: #e0e0e0; /* Light text color */
+    padding: 10px 15px;
     border-radius: 8px;
-    border: 1px solid #c5cae9;
+    border: 1px solid rgba(197, 202, 233, 0.3); /* Semi-transparent border */
     text-align: center;
+    flex-shrink: 0; /* Prevent shrinking */
 }
-#user-rank-text { color: #1a237e; }
+#user-rank-text { color: #bb86fc; }
+
+/* --- Back Button --- */
 #back-to-game {
-    margin-top: 25px;
-    padding: 12px 25px;
-    background: linear-gradient(45deg, #42a5f5, #1e88e5);
+    display: block;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 24px;
+    padding: 12px 24px;
+    background: linear-gradient(45deg, #673ab7, #512da8);
     color: white;
     border: none;
     border-radius: 8px;
@@ -178,17 +229,21 @@
     font-size: 1rem;
     font-weight: 500;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+    text-transform: uppercase;
 }
+
 #back-to-game:hover {
-    background: linear-gradient(45deg, #1e88e5, #1565c0);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(45deg, #5e35b1, #4527a0);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     transform: translateY(-2px);
 }
 #back-to-game:active {
     transform: translateY(0);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
+
 /* --- Rank Colors Default --- */
 .rank-1 { --color: #ffc107; color: #424242;}
 .rank-2 { --color: #e0e0e0; color: #424242;}
@@ -203,11 +258,18 @@
 .user-rank-outside { --color: #7e57c2; }
 
 /* --- Rank Colors Custom--- */
-.rank-1 { --color: #ffd34d; color: #424242;} /* Gold */
-.rank-2 { --color: #e0e0e0; color: #424242;} /* Silver */
-.rank-3 { --color: #d8a477; } /* Bronze */
-.rank-4 { --color: #78909c; }
-.rank-5 { --color: #4d9ee0; }
-.rank-6 { --color: #e57373; }
-.rank-7, .rank-8, .rank-9, .rank-10 { --color: #b4b4b4; color: #424242;}
+.rank-1, .rank-2, .rank-3, .rank-4, .rank-5, .rank-6, .rank-7, .rank-8, .rank-9, .rank-10, .user-rank-outside {
+    color: #424242;
+}
+
+.rank-1 { --color: linear-gradient(0deg, rgba(250,214,80,1) 0%, rgba(255,244,180,1) 100%);}
+.rank-2 { --color: linear-gradient(0deg, rgb(190, 190, 190) 0%, rgb(255, 255, 255) 100%);}
+.rank-3 { --color: linear-gradient(0deg, rgb(206, 151, 104) 0%, rgba(250,215,184,1) 100%);}
+.rank-4 { --color: #ff8060;}
+.rank-5 { --color: #fcda43;}
+.rank-6 { --color: #77db7f;}
+.rank-7 { --color: #52c9e7;}
+.rank-8 { --color: #e573e5; color: #fff;}
+.rank-9 { --color: #bb73e5; color: #fff;}
+.rank-10 { --color: #835cdd; color: #fff;}
 .user-rank-outside { --color: #7e57c2; }

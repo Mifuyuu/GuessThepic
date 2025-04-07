@@ -25,6 +25,8 @@ const timeLeftSpan = document.getElementById('time-left');
 const streakSpan = document.getElementById('streak');
 const mostStreakSpan = document.getElementById('most-streak');
 const LeaderboardBtn = document.getElementById('leaderboad-btn');
+const streakBtn = document.getElementById('streak-btn');
+const pointsWrapper = document.getElementById('points-Wrapper');
 
 const PENDING_PENALTY_KEY = 'pendingPenaltyScore';
 
@@ -235,6 +237,8 @@ async function fetchPlayerData() {
                 streakSpan.textContent = correctStreak;
                 mostStreakSpan.textContent = mostStreak;
 
+                updateSideMenuUI();
+
                 log('Player data fetched and UI updated:', { userScore, correctStreak, mostStreak });
                 return true;
             } else {
@@ -263,12 +267,30 @@ function updateSideMenuUI() {
 
     const minutes = Math.floor(gameData.timeLeft / 60);
     const seconds = gameData.timeLeft % 60;
-    timeLeftSpan.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
+    if (gameData.isActive) {
+        timeLeftSpan.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    } else {
+        timeLeftSpan.textContent = 'N/A';
+    }
+    
     // playerScoresSpan.textContent = userScore;
     streakSpan.textContent = correctStreak;
     mostStreakSpan.textContent = mostStreak;
     playerUsernameSpan.textContent = username;
+
+    if (streakBtn && pointsWrapper) {
+        if (correctStreak > 1) {
+            streakBtn.classList.remove('normal');
+            streakBtn.classList.add('special');
+            pointsWrapper.style.display = 'block';
+        } else {
+            streakBtn.classList.remove('special');
+            streakBtn.classList.add('normal');
+            pointsWrapper.style.display = 'none';
+        }
+    } else {
+         warn("Not found streak button or points wrapper for modification.");
+    }
 }
 
 function handleAnswer(selectedIndex) {
@@ -297,7 +319,7 @@ function handleAnswer(selectedIndex) {
         pointsChange = Math.round((baseScoreCorrect + timeBonus) * scoreMultiplier);
         finalScore = userScore + pointsChange;
 
-        var count = 200;
+        var count = 100;
         var defaults = {
         origin: { y: 0.8 },
         zIndex: 9999
@@ -388,8 +410,8 @@ function handleAnswer(selectedIndex) {
     streakSpan.textContent = correctStreak;
     mostStreakSpan.textContent = mostStreak;
 
+    updateSideMenuUI();
     saveScoreToServer(userScore, correctStreak, mostStreak);
-
     revealAllTiles();
 }
 
@@ -456,6 +478,8 @@ function handleTimeout() {
     userScore = finalScore;
     playerScoresSpan.textContent = userScore;
     streakSpan.textContent = correctStreak;
+
+    updateSideMenuUI();
 
     Swal.fire({
         theme: "dark",

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,19 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link rel="stylesheet" href="assets/background.main.css">
     <link rel="icon" href="imgs/guessthepic-icon.png" type="image/x-icon">
-    <style>
-        .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            width: 100vw;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 2;
-        }
-    </style>
 </head>
 <body>
     <div id="particles-background" class="vertical-centered-box"></div>
@@ -46,12 +34,24 @@
                             <span><span id="time-left" class="bg-dark">N/A</span>s</span>
                         </div>
                     </div>
-                    <div class="menu-item backgrou-left">
-                        <div class="item-content">
+                    <div class="menu-highlight normal" id="streak-btn">
+                        <div class="points_wrapper" id="points-Wrapper">
+                            <i class="point"></i>
+                            <i class="point"></i>
+                            <i class="point"></i>
+                            <i class="point"></i>
+                            <i class="point"></i>
+                            <i class="point"></i>
+                            <i class="point"></i>
+                            <i class="point"></i>
+                            <i class="point"></i>
+                            <i class="point"></i>
+                        </div>
+                        <span class="inner">
                             <i class="fa-solid fa-bolt"></i>
                             <span>Streak :</span>
                             <span id="streak" class="bg-dark">N/A</span>
-                        </div>
+                        </span>
                     </div>
                     <div class="menu-item backgrou-left">
                         <div class="item-content">
@@ -95,14 +95,14 @@
                 <div id="game-grid"></div>
                 <div class="game-menu">
                     <div id="choices"></div>
-                    <!-- <div id="restart" class="" style="display: none;">เริ่มใหม่</div> -->
                 </div>
             </div>
         </main>
     </main>
-    <script src="assets/background.min.js"></script>
+    <!-- <script src="assets/background.min.js"></script> -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="game.logic.js"></script>
 </body>
+
 </html>
