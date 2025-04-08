@@ -302,7 +302,7 @@ function handleAnswer(selectedIndex) {
     clearInterval(gameData.timer);
 
     const baseScoreCorrect = 100;
-    const timeBonus = gameData.timeLeft >= 20 ? 50 : gameData.timeLeft >= 10 ? 25 : 0;
+    // const timeBonus = gameData.timeLeft >= 25 ? 75 : gameData.timeLeft >= 20 ? 50 : gameData.timeLeft >= 15 ? 25 : gameData.timeLeft >= 10 ? 10 : 0;
     const penaltyWrong = 100;
 
     let finalScore = userScore;
@@ -316,7 +316,11 @@ function handleAnswer(selectedIndex) {
             mostStreak = correctStreak;
         }
         const scoreMultiplier = 1 + (0.1 * correctStreak);
-        pointsChange = Math.round((baseScoreCorrect + timeBonus) * scoreMultiplier);
+        const timeBonusMultiplier = 1 + (0.1 * Math.floor(gameData.timeLeft / 5));
+        const totalMultiplier = scoreMultiplier * timeBonusMultiplier;
+        // pointsChange = Math.round((baseScoreCorrect + timeBonus) * scoreMultiplier);
+        pointsChange = Math.round(baseScoreCorrect * totalMultiplier);
+        bonusPoints = pointsChange - baseScoreCorrect;
         finalScore = userScore + pointsChange;
 
         var count = 100;
@@ -359,7 +363,7 @@ function handleAnswer(selectedIndex) {
         Swal.fire({
             theme: "dark",
             title: "YOU WIN!",
-            text: `🎉 ยินดีด้วย! คุณตอบถูก! +${pointsChange} คะแนน`,
+            text: `🎉 ยินดีด้วย! คุณตอบถูก! +${pointsChange}(+${bonusPoints} Bonus) คะแนน`,
             icon: "success",
             showCancelButton: true,
             confirmButtonColor: "#3085d6",

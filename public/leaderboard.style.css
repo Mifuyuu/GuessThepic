@@ -63,13 +63,16 @@
     white-space: nowrap;
 }
 #sort-by {
-    padding: 10px 15px;
+    padding: 10px 16px;
     border-radius: 6px;
     border: 1px solid #ccc;
     font-size: 1rem;
     flex-grow: 1;
     background-color: #fff;
     cursor: pointer;
+    &:hover {
+        background-color: #e7e7e7;
+    }
 }
 
 /* --- Leaderboard Area --- */
@@ -272,4 +275,4 @@
 .rank-8 { --color: #e573e5; color: #fff;}
 .rank-9 { --color: #bb73e5; color: #fff;}
 .rank-10 { --color: #835cdd; color: #fff;}
-.user-rank-outside { --color: #7e57c2; }
+.user-rank-outside { --color: #5725cc; color: #fff;}

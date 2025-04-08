@@ -13,10 +13,10 @@ const token = localStorage.getItem('token');
 let isFetchingLeaderboard = false;
 
 // --- Socket.IO Client Setup ---
-const socket = io({ /* auth: { token: token } */ });
+const socket = io({ /*auth: { token: token }*/ });
 
 // --- Debugging Functionality ---
-const debug = true;
+const debug = false;
 const prefix = "[DEBUG] ";
 const log = (msg) => debug && console.log(prefix + msg);
 const warn = (msg) => debug && console.warn(prefix + msg);
@@ -324,7 +324,7 @@ function handleUserOutsideTop10(userData, top10Usernames, sortBy) {
             userRowOutside.className = 'scoreboard-row user-rank-outside entering';
             userRowOutside.style.setProperty('--i', 10); // Position as the 11th item (index 10)
             userRowOutside.innerHTML = `
-                <span>${rankString}. ${currentUsername}</span> <!-- Show formatted rank -->
+                <span>${userData.rank}. ${currentUsername}</span> <!-- Show formatted rank -->
                 <span>${userValue}</span>
             `;
             leaderboardDiv.appendChild(userRowOutside);
@@ -341,7 +341,7 @@ function handleUserOutsideTop10(userData, top10Usernames, sortBy) {
         } else { // Update if exists
             log(` -> Updating special row for user ${currentUsername} (Rank ${userData.rank})`);
             userRowOutside.innerHTML = `
-                <span>${rankString}. ${currentUsername}</span>
+                <span>${userData.rank}. ${currentUsername}</span>
                 <span>${userValue}</span>
             `;
             // Ensure it's visible and not marked for removal/entering
