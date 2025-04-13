@@ -45,7 +45,7 @@ body {
 }
 
 body {
-  background: mix(#566c8c, #35333d, 70%);
+  background: mix(#242832, #242832, #1d1a22, 70%);
 }
 
 #particles-background,
@@ -58,8 +58,8 @@ body {
 }
 
 #particles-background {
-  background: mix(#566c8c, #35333d, 70%);
-  background-image: -moz-linear-gradient(45deg, #566c8c 2%, #35333d 100%);
-  background-image: -webkit-linear-gradient(45deg, #566c8c 2%, #35333d 100%);
-  background-image: linear-gradient(45deg, #566c8c 2%, #35333d 100%);
+  background: mix(#242832, #242832, #1d1a22, 70%);
+  background-image: -moz-linear-gradient(45deg, #242832 2%, #1d1a22 100%);
+  background-image: -webkit-linear-gradient(45deg, #242832 2%, #1d1a22 100%);
+  background-image: linear-gradient(45deg, #242832 2%, #1d1a22 100%);
 }
