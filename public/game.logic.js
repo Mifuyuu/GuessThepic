@@ -12,6 +12,8 @@ let userScore = 0;
 let correctStreak = 0;
 let mostStreak = 0;
 let username = '';
+let allImages = [];
+let playedImages = [];
 
 const statusDiv = document.getElementById('status');
 const gameGridDiv = document.getElementById('game-grid');
@@ -29,6 +31,74 @@ const streakBtn = document.getElementById('streak-btn');
 const pointsWrapper = document.getElementById('points-Wrapper');
 
 const PENDING_PENALTY_KEY = 'pendingPenaltyScore';
+
+// Helper functions for managing played images per user
+function getPlayedImagesKey() {
+    return `playedImages_${username}`;
+}
+
+function loadPlayedImages() {
+    try {
+        const stored = localStorage.getItem(getPlayedImagesKey());
+        return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+        warn("Error loading played images:", error);
+        return [];
+    }
+}
+
+function savePlayedImages(images) {
+    try {
+        localStorage.setItem(getPlayedImagesKey(), JSON.stringify(images));
+        log("Played images saved:", images);
+    } catch (error) {
+        err("Error saving played images:", error);
+    }
+}
+
+function addPlayedImage(imagePath) {
+    if (!playedImages.includes(imagePath)) {
+        playedImages.push(imagePath);
+        savePlayedImages(playedImages);
+        log(`Added ${imagePath} to played images. Total played: ${playedImages.length}/${allImages.length}`);
+    }
+}
+
+function resetPlayedImages() {
+    playedImages = [];
+    savePlayedImages(playedImages);
+    log("Played images reset for new cycle");
+}
+
+function selectRandomImage() {
+    if (!allImages || allImages.length === 0) {
+        err("No images available for selection");
+        return null;
+    }
+
+    // Get unplayed images
+    const unplayedImages = allImages.filter(img => !playedImages.includes(img.path));
+    
+    // If all images have been played, reset and start new cycle
+    if (unplayedImages.length === 0) {
+        log("All images completed! Starting new cycle...");
+        resetPlayedImages();
+        return allImages[Math.floor(Math.random() * allImages.length)];
+    }
+    
+    // Select from unplayed images (80% chance) or any image (20% chance)
+    const useUnplayedOnly = Math.random() < 0.8;
+    
+    if (useUnplayedOnly) {
+        const selectedImage = unplayedImages[Math.floor(Math.random() * unplayedImages.length)];
+        log(`Selected unplayed image: ${selectedImage.path} (${unplayedImages.length} unplayed remaining)`);
+        return selectedImage;
+    } else {
+        const selectedImage = allImages[Math.floor(Math.random() * allImages.length)];
+        log(`Selected any image: ${selectedImage.path} (allowing replay)`);
+        return selectedImage;
+    }
+}
 
 startBtn.addEventListener('click', initGame);
 
@@ -92,6 +162,10 @@ window.addEventListener('load', async () => {
     username = sessionUser;
     playerUsernameSpan.textContent = username;
     statusDiv.textContent = 'Loading player data...';
+    
+    // Load played images for this user
+    playedImages = loadPlayedImages();
+    log(`Loaded ${playedImages.length} played images for user: ${username}`);
 
     const initialPlayerDataFetched = await fetchPlayerData();
 
@@ -167,7 +241,7 @@ async function initGame() {
     clicks = 0;
 
     statusDiv.style.display = 'flex';
-    gameData.randomReveals = 3;
+    gameData.randomReveals = 5;
     gameData.timeLeft = 30;
     gameData.isActive = true;
     clearInterval(gameData.timer);
@@ -187,7 +261,17 @@ async function initGame() {
         if (!images || images.length === 0) {
              throw new Error('No images found in data.json');
         }
-        currentImage = images[Math.floor(Math.random() * images.length)];
+        
+        // Store all images and select one using smart selection
+        allImages = images;
+        currentImage = selectRandomImage();
+        
+        if (!currentImage) {
+            throw new Error('Failed to select an image');
+        }
+        
+        // Add this image to played list
+        addPlayedImage(currentImage.path);
 
         if (currentImage && currentImage.questions) {
             statusDiv.textContent = currentImage.questions;
@@ -301,8 +385,17 @@ function handleAnswer(selectedIndex) {
     gameData.isActive = false;
     clearInterval(gameData.timer);
 
+    // เปิดช่องทั้งหมดก่อนแสดงผลลัพธ์
+    revealAllTiles();
+
+    // รอ 2 วินาทีเพื่อให้ผู้เล่นมองเห็นภาพเต็มก่อนแสดงผลลัพธ์
+    setTimeout(() => {
+        showGameResult(selectedIndex);
+    }, 2000);
+}
+
+function showGameResult(selectedIndex) {
     const baseScoreCorrect = 100;
-    // const timeBonus = gameData.timeLeft >= 25 ? 75 : gameData.timeLeft >= 20 ? 50 : gameData.timeLeft >= 15 ? 25 : gameData.timeLeft >= 10 ? 10 : 0;
     const penaltyWrong = 100;
 
     let finalScore = userScore;
@@ -318,7 +411,6 @@ function handleAnswer(selectedIndex) {
         const scoreMultiplier = 1 + (0.1 * correctStreak);
         const timeBonusMultiplier = 1 + (0.1 * Math.floor(gameData.timeLeft / 5));
         const totalMultiplier = scoreMultiplier * timeBonusMultiplier;
-        // pointsChange = Math.round((baseScoreCorrect + timeBonus) * scoreMultiplier);
         pointsChange = Math.round(baseScoreCorrect * totalMultiplier);
         bonusPoints = pointsChange - baseScoreCorrect;
         finalScore = userScore + pointsChange;
@@ -390,7 +482,7 @@ function handleAnswer(selectedIndex) {
         Swal.fire({
             theme: "dark",
             title: "YOU LOSE!",
-            text: `💩 เสียใจด้วยคุณตอบผิดนะ -${penaltyWrong} คะแนน`,
+            text: `💩 เสียใจด้วยคุณตอบผิดนะ -${penaltyWrong} คะแนน\nคำตอบที่ถูกคือ: ${currentImage.choices[currentImage.correct]}`,
             icon: "error",
             showCancelButton: true,
             confirmButtonColor: "#3085d6",
@@ -416,7 +508,6 @@ function handleAnswer(selectedIndex) {
 
     updateSideMenuUI();
     saveScoreToServer(userScore, correctStreak, mostStreak);
-    revealAllTiles();
 }
 
 async function saveScoreToServer(finalScoreToSave, currentCorrectStreak, currentMostStreak) {
@@ -474,6 +565,17 @@ function handleTimeout() {
     gameData.isActive = false;
 
     log("Time's up!");
+    
+    // เปิดช่องทั้งหมดก่อนแสดงผลลัพธ์
+    revealAllTiles();
+
+    // รอ 2 วินาทีเพื่อให้ผู้เล่นมองเห็นภาพเต็มก่อนแสดงผลลัพธ์
+    setTimeout(() => {
+        showTimeoutResult();
+    }, 2000);
+}
+
+function showTimeoutResult() {
     const timeOutPenalty = 100;
     correctStreak = 0;
 
@@ -488,7 +590,7 @@ function handleTimeout() {
     Swal.fire({
         theme: "dark",
         title: "TIME 'S UP!",
-        text: `⏳ เสียใจด้วย หมดเวลาแล้วนะ -${timeOutPenalty} คะแนน`,
+        text: `⏳ เสียใจด้วย หมดเวลาแล้วนะ -${timeOutPenalty} คะแนน\nคำตอบที่ถูกคือ: ${currentImage.choices[currentImage.correct]}`,
         icon: "error",
         showCancelButton: true,
         confirmButtonColor: "#3085d6",
@@ -505,7 +607,6 @@ function handleTimeout() {
 
     log(`⏳ Time's up! -${timeOutPenalty} Points. New Total: ${finalScore}. Correct was: ${currentImage.choices[currentImage.correct]}`);
     saveScoreToServer(userScore, correctStreak, mostStreak);
-    revealAllTiles();
 }
 
 function revealAllTiles() {

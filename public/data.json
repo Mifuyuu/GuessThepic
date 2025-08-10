@@ -1,62 +1,266 @@
 [
     {
-        "path": "imgs/1.png",
-        "questions": "Character นี้มีชื่อว่าอะไร?",
+        "path": "imgs/001.webp",
+        "questions": "ภาพนี้คืออะไร?",
         "correct": 0,
         "choices": [
-            "Mika",
-            "Beach",
-            "Forest",
-            "Cityscape",
-            "Desert",
-            "Waterfall",
-            "Space",
-            "Farm"
+            "Graphic Card",
+            "Capture Card",
+            "Credit Card",
+            "Master Card"
         ]
     },
     {
-        "path": "imgs/2.png",
-        "questions": "What animal is this?",
-        "correct": 6,
+        "path": "imgs/002.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
         "choices": [
-            "Elephant",
-            "Lion",
-            "Giraffe",
-            "Penguin",
-            "Dolphin",
-            "Panda",
-            "Castorice",
-            "Tiger"
+            "Monitor",
+            "Projector",
+            "Helicopter",
+            "PinkPanther"
         ]
     },
     {
-        "path": "imgs/3.png",
-        "questions": "What animal is this?",
-        "correct": 2,
+        "path": "imgs/003.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
         "choices": [
-            "Elephant",
-            "Lion",
-            "Firefly",
-            "Penguin",
-            "Dolphin",
-            "Panda",
-            "Kangaroo",
-            "Tiger"
+            "Ram",
+            "Rom",
+            "Capture Card",
+            "CPU"
         ]
     },
     {
-        "path": "imgs/4.png",
-        "questions": "What animal is this?",
-        "correct": 7,
+        "path": "imgs/004.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
         "choices": [
-            "Kingyuan",
-            "Tribble",
-            "Kafka",
-            "Pela",
-            "Qingque",
-            "Jingliu",
-            "Castorice",
-            "Firefly"
+            "CPU",
+            "Graphic Card",
+            "Ram",
+            "Power Supply"
+        ]
+    },
+    {
+        "path": "imgs/005.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Motherboard",
+            "Graphic Card",
+            "Ram",
+            "CPU"
+        ]
+    },
+    {
+        "path": "imgs/006.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Power Supply",
+            "Hard Drive",
+            "SSD",
+            "DVD Drive"
+        ]
+    },
+    {
+        "path": "imgs/007.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "USB Flash Drive",
+            "Mouse",
+            "Gamepad",
+            "Remote Control"
+        ]
+    },
+    {
+        "path": "imgs/008.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Floppy Disk",
+            "Keyboard",
+            "Touchpad",
+            "Joystick"
+        ]
+    },
+    {
+        "path": "imgs/009.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "CD/DVD",
+            "Headphone",
+            "Microphone",
+            "Webcam"
+        ]
+    },
+    {
+        "path": "imgs/010.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Hard Drive/HHD",
+            "Speaker",
+            "Earphone",
+            "Microphone"
+        ]
+    },
+    {
+        "path": "imgs/011.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "M.2 SSD",
+            "Microphone",
+            "Speaker",
+            "Security Camera"
+        ]
+    },
+    {
+        "path": "imgs/012.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Case",
+            "Scanner",
+            "Fax Machine",
+            "Photocopier"
+        ]
+    },
+    {
+        "path": "imgs/013.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Keyboard",
+            "SD Card",
+            "Memory Stick",
+            "Micro SD"
+        ]
+    },
+    {
+        "path": "imgs/014.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Mouse",
+            "Modem",
+            "Switch",
+            "Access Point"
+        ]
+    },
+    {
+        "path": "imgs/015.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Printer",
+            "Internal Hard Drive",
+            "SSD",
+            "CD Drive"
+        ]
+    },
+    {
+        "path": "imgs/016.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Webcam",
+            "Blu-ray Disc",
+            "Floppy Disk",
+            "USB Drive"
+        ]
+    },
+    {
+        "path": "imgs/017.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Micro SD",
+            "Printer",
+            "Photocopier",
+            "Fax Machine"
+        ]
+    },
+    {
+        "path": "imgs/018.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Headset",
+            "Desktop",
+            "Tablet",
+            "Notebook"
+        ]
+    },
+    {
+        "path": "imgs/019.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Microphone",
+            "Laptop",
+            "Smartphone",
+            "E-reader"
+        ]
+    },
+    {
+        "path": "imgs/020.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "SSD SATA",
+            "Power Supply",
+            "Surge Protector",
+            "Extension Cord"
+        ]
+    },
+    {
+        "path": "imgs/021.webp",
+        "questions": "ภาพนี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Lan Cable",
+            "USB Hub",
+            "Splitter",
+            "Adapter"
+        ]
+    },
+    {
+        "path": "imgs/022.webp",
+        "questions": "LOGO นี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "ChatGPT",
+            "Claude",
+            "Gemini",
+            "Grok"
+        ]
+    },
+    {
+        "path": "imgs/023.webp",
+        "questions": "LOGO นี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Gemini",
+            "ChatGPT",
+            "Claude",
+            "Grok"
+        ]
+    },
+    {
+        "path": "imgs/024.webp",
+        "questions": "LOGO นี้คืออะไร?",
+        "correct": 0,
+        "choices": [
+            "Claude",
+            "Gemini",
+            "ChatGPT",
+            "Grok"
         ]
     }
 ]
