@@ -26,8 +26,8 @@
         "questions": "ภาพนี้คืออะไร?",
         "correct": 0,
         "choices": [
-            "Ram",
-            "Rom",
+            "RAM",
+            "ROM",
             "Capture Card",
             "CPU"
         ]
@@ -39,7 +39,7 @@
         "choices": [
             "CPU",
             "Graphic Card",
-            "Ram",
+            "RAM",
             "Power Supply"
         ]
     },
@@ -50,7 +50,7 @@
         "choices": [
             "Motherboard",
             "Graphic Card",
-            "Ram",
+            "ROM",
             "CPU"
         ]
     },
@@ -61,7 +61,7 @@
         "choices": [
             "Power Supply",
             "Hard Drive",
-            "SSD",
+            "SSD SATA",
             "DVD Drive"
         ]
     },
@@ -70,7 +70,7 @@
         "questions": "ภาพนี้คืออะไร?",
         "correct": 0,
         "choices": [
-            "USB Flash Drive",
+            "Flash Drive",
             "Mouse",
             "Gamepad",
             "Remote Control"
@@ -103,7 +103,7 @@
         "questions": "ภาพนี้คืออะไร?",
         "correct": 0,
         "choices": [
-            "Hard Drive/HHD",
+            "HDD",
             "Speaker",
             "Earphone",
             "Microphone"
@@ -114,10 +114,10 @@
         "questions": "ภาพนี้คืออะไร?",
         "correct": 0,
         "choices": [
-            "M.2 SSD",
+            "SSD M.2",
             "Microphone",
             "Speaker",
-            "Security Camera"
+            "Webcam"
         ]
     },
     {
@@ -180,7 +180,7 @@
         "questions": "ภาพนี้คืออะไร?",
         "correct": 0,
         "choices": [
-            "Micro SD",
+            "Micro SD Card",
             "Printer",
             "Photocopier",
             "Fax Machine"
@@ -224,7 +224,7 @@
         "questions": "ภาพนี้คืออะไร?",
         "correct": 0,
         "choices": [
-            "Lan Cable",
+            "LAN Cable",
             "USB Hub",
             "Splitter",
             "Adapter"
