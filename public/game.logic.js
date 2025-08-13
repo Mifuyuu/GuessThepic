@@ -391,7 +391,7 @@ function handleAnswer(selectedIndex) {
     // รอ 2 วินาทีเพื่อให้ผู้เล่นมองเห็นภาพเต็มก่อนแสดงผลลัพธ์
     setTimeout(() => {
         showGameResult(selectedIndex);
-    }, 2000);
+    }, 1000);
 }
 
 function showGameResult(selectedIndex) {
@@ -572,7 +572,7 @@ function handleTimeout() {
     // รอ 2 วินาทีเพื่อให้ผู้เล่นมองเห็นภาพเต็มก่อนแสดงผลลัพธ์
     setTimeout(() => {
         showTimeoutResult();
-    }, 2000);
+    }, 1000);
 }
 
 function showTimeoutResult() {
