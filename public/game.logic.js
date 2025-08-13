@@ -723,7 +723,7 @@ function renderChoices() {
     select.disabled = !gameData.isActive;
 
     const defaultOption = document.createElement('option');
-    defaultOption.textContent = "Select your answer...";
+    defaultOption.textContent = "เลือกคำตอบที่นี่...";
     defaultOption.value = "";
     defaultOption.disabled = true;
     defaultOption.selected = true;
@@ -769,7 +769,7 @@ function renderRandomRevealButton() {
         revealBtn = newBtn;
     }
 
-    revealBtn.innerHTML = `<i class="fa-solid fa-puzzle-piece"></i> Random Open (${gameData.randomReveals})`;
+    revealBtn.innerHTML = `<i class="fa-solid fa-puzzle-piece"></i> สุ่มเปิดช่อง (${gameData.randomReveals})`;
     revealBtn.disabled = (gameData.randomReveals <= 0 || !gameData.isActive);
 }
 
