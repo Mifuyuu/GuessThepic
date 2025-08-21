@@ -229,38 +229,5 @@
             "Splitter",
             "Adapter"
         ]
-    },
-    {
-        "path": "imgs/022.webp",
-        "questions": "LOGO นี้คืออะไร?",
-        "correct": 0,
-        "choices": [
-            "ChatGPT",
-            "Claude",
-            "Gemini",
-            "Grok"
-        ]
-    },
-    {
-        "path": "imgs/023.webp",
-        "questions": "LOGO นี้คืออะไร?",
-        "correct": 0,
-        "choices": [
-            "Gemini",
-            "ChatGPT",
-            "Claude",
-            "Grok"
-        ]
-    },
-    {
-        "path": "imgs/024.webp",
-        "questions": "LOGO นี้คืออะไร?",
-        "correct": 0,
-        "choices": [
-            "Claude",
-            "Gemini",
-            "ChatGPT",
-            "Grok"
-        ]
     }
 ]
