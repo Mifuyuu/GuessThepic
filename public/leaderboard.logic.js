@@ -2,7 +2,7 @@ const sortBySelect = document.getElementById('sort-by');
 const leaderboardDiv = document.getElementById('leaderboard');
 const userRankDiv = document.getElementById('user-rank');
 const statusMessage = document.getElementById('status-message');
-const backToGameButton = document.getElementById('back-to-game');
+const logoutButton = document.getElementById('logout-btn');
 const USER_OUTSIDE_ROW_ID = 'user-rank-outside-row';
 const TRANSITION_DURATION = 500;
 
@@ -93,7 +93,11 @@ function requestLeaderboardUpdate() {
 }
 
 // --- Event Listeners ---
-backToGameButton.addEventListener('click', () => window.location.href = 'game.html');
+logoutButton.addEventListener('click', () => {
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('username');
+    window.location.href = 'index.html';
+});
 sortBySelect.addEventListener('change', () => {
     log(`Sort changed to: ${sortBySelect.value}`);
     // Clear board instantly for visual feedback before loading new sort order
@@ -359,10 +363,14 @@ function handleUserOutsideTop10(userData, top10Usernames, sortBy) {
 }
 
 // --- Initial Load ---
-window.addEventListener('load', () => {
-    currentUsername = sessionStorage.getItem('username');
-    const currentToken = localStorage.getItem('token');
-    if (currentToken && currentUsername) {
+document.addEventListener('DOMContentLoaded', () => {
+    // Auto-logout timer: 30 seconds after arriving at leaderboard
+    setTimeout(() => {
+        log('Auto-logout timer expired. Logging out and redirecting to index.');
+        clearAuthDataAndRedirect();
+    }, 30000); // 30 seconds
+
+    if (token && currentUsername) {
         log('Token and username found on load. Fetching initial leaderboard.');
         requestLeaderboardUpdate();
     } else {

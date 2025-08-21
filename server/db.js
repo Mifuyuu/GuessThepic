@@ -19,12 +19,14 @@ const User = sequelize.define('User', {
         allowNull: false,
         unique: true,
         validate: {
-            len: [3, 12] // ตรวจสอบความยาวเหมือนเดิม
-        }
+            len: [3, 12]
+        },
+        // SQLite: กำหนด collation เป็น BINARY เพื่อให้ case sensitive
+        collate: 'BINARY'
     },
     password: {
         type: DataTypes.STRING,
-        allowNull: true, // เปลี่ยนเป็น nullable เพราะไม่ใช้รหัสผ่านแล้ว
+        allowNull: true,
         defaultValue: 'no-password'
     }
 });
@@ -52,6 +54,15 @@ const Score = sequelize.define('Score', {
     mostStreak: {
         type: DataTypes.INTEGER,
         defaultValue: 0
+    },
+    gameStartTime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null
+    },
+    totalGameTime: {
+        type: DataTypes.INTEGER, // เก็บเป็นวินาที
+        defaultValue: 60 // 1 นาที
     }
 });
 
@@ -66,7 +77,8 @@ Score.belongsTo(User, { foreignKey: 'username' });
 const connectDB = async () => {
     try {
         // .sync() จะสร้างตารางให้ตาม Model ที่เรา define ไว้ ถ้าตารางยังไม่มี
-        await sequelize.sync({ force: false }); // force: true จะลบตารางเก่าทิ้งทั้งหมด (ใช้ตอน dev)
+        // ใช้ force: false เพื่อคงข้อมูลเดิมไว้ (เปลี่ยนจาก true เป็น false)
+        await sequelize.sync({ force: false }); 
         console.log('SQLite database connected and tables synced.');
     } catch (error) {
         console.error('Unable to connect to the database:', error);

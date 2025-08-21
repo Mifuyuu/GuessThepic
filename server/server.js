@@ -54,17 +54,22 @@ app.post('/api/enter-game', async (req, res) => {
     const { username } = req.body;
 
     if (!username) {
-        return res.status(400).send('Please enter a username.');
+        return res.status(400).send('กรุณากรอกชื่อผู้ใช้');
     }
     if (username.length < 3 || username.length > 12) {
-        return res.status(400).send('Username must be between 3 to 12 characters long.');
+        return res.status(400).send('จำเป็นต้องตั้งชื่ออย่างน้อย 3 ถึง 12 ตัวอักษร');
     }
 
     try {
-        // ตรวจสอบว่า username ซ้ำหรือไม่
-        const existingUser = await User.findOne({ where: { username } });
+        // ตรวจสอบว่า username ซ้ำหรือไม่ (case-insensitive)
+        const existingUser = await User.findOne({ 
+            where: sequelize.where(
+                sequelize.fn('LOWER', sequelize.col('username')), 
+                username.toLowerCase()
+            )
+        });
         if (existingUser) {
-            return res.status(400).send('Username already taken. Please choose another name.');
+            return res.status(400).send('ชื่อผู้ใช้ถูกใช้งานแล้ว กรุณาเลือกชื่ออื่น');
         }
 
         // สร้าง User ใหม่ (ไม่ต้องใช้รหัสผ่าน)
@@ -81,7 +86,7 @@ app.post('/api/enter-game', async (req, res) => {
         });
     } catch (error) {
         if (error.name === 'SequelizeUniqueConstraintError') {
-            return res.status(400).send('Username already taken. Please choose another name.');
+            return res.status(400).send('ชื่อผู้ใช้ถูกใช้งานแล้ว กรุณาเลือกชื่ออื่น');
         }
         console.error('Error entering game:', error);
         res.status(500).send('Error entering game');
@@ -147,23 +152,82 @@ app.get('/api/player/me', authenticateToken, async (req, res) => {
         const player = await Score.findOne({ where: { username: username } });
 
         if (player) {
+            // คำนวณเวลาที่เหลือ
+            let timeRemaining = player.totalGameTime;
+            if (player.gameStartTime) {
+                const elapsedSeconds = Math.floor((Date.now() - new Date(player.gameStartTime).getTime()) / 1000);
+                timeRemaining = Math.max(0, player.totalGameTime - elapsedSeconds);
+            }
+
             res.json({
                 username: player.username,
                 score: player.score,
                 correctStreak: player.correctStreak,
-                mostStreak: player.mostStreak
+                mostStreak: player.mostStreak,
+                gameStartTime: player.gameStartTime,
+                timeRemaining: timeRemaining,
+                totalGameTime: player.totalGameTime
             });
         } else {
              res.json({
                 username: username,
                 score: 0,
                 correctStreak: 0,
-                mostStreak: 0
+                mostStreak: 0,
+                gameStartTime: null,
+                timeRemaining: 60,
+                totalGameTime: 60
              });
         }
     } catch (error) {
         console.error('Error fetching player data for', username, ':', error);
         res.status(500).send('Error fetching player data');
+    }
+});
+
+// Start Game Timer Endpoint (Protected)
+app.post('/api/start-game-timer', authenticateToken, async (req, res) => {
+    const username = req.user.username;
+
+    try {
+        // ตรวจสอบว่า User มีอยู่ใน database หรือไม่
+        const user = await User.findOne({ where: { username: username } });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const [scoreRecord, created] = await Score.findOrCreate({
+            where: { username: username },
+            defaults: {
+                username: username,
+                score: 0,
+                correctStreak: 0,
+                mostStreak: 0,
+                gameStartTime: new Date(),
+                totalGameTime: 60
+            }
+        });
+
+        // ถ้าไม่ได้สร้างใหม่ และยังไม่เริ่มจับเวลา ให้เริ่มจับเวลา
+        if (!created && !scoreRecord.gameStartTime) {
+            scoreRecord.gameStartTime = new Date();
+            await scoreRecord.save();
+        }
+
+        const elapsedSeconds = scoreRecord.gameStartTime ? 
+            Math.floor((Date.now() - new Date(scoreRecord.gameStartTime).getTime()) / 1000) : 0;
+        const timeRemaining = Math.max(0, scoreRecord.totalGameTime - elapsedSeconds);
+
+        res.json({
+            message: 'Game timer started',
+            gameStartTime: scoreRecord.gameStartTime,
+            timeRemaining: timeRemaining,
+            totalGameTime: scoreRecord.totalGameTime
+        });
+
+    } catch (error) {
+        console.error('Error starting game timer for', username, ':', error);
+        res.status(500).send('Error starting game timer');
     }
 });
 
