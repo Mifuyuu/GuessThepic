@@ -42,12 +42,27 @@
                 text-transform: uppercase;
             }
         }
-        .left-sec, .right-sec {
+        .main-sec {
             display: flex;
             flex-direction: column;
-            padding: 20px;
-            width: 50%;
-            gap: 12px;
+            padding: 40px;
+            width: 100%;
+            gap: 15px;
+            text-align: center;
+        }
+        .main-sec h2 {
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .main-sec p {
+            margin: 5px 0;
+            font-size: 16px;
+            color: #ccc;
+        }
+        .main-sec .note {
+            font-size: 14px;
+            color: #f39c12;
+            font-style: italic;
         }
         input {
             height: 40px;
@@ -73,19 +88,13 @@
     <div id="particles-foreground" class="vertical-centered-box"></div>
     <main class="container">
         <div id="auth-container">
-            <div class="left-sec">
-                <h2>Sign Up</h2>
-                <input type="text" id="signup-username" placeholder="Username">
-                <input type="password" id="signup-password" placeholder="Password">
-                <button id="signup-btn" class="btn btn-primary">Sign Up</button>
-                <div id="signup-noti"></div>
-            </div>
-            <div class="right-sec">
-                <h2>Sign In</h2>
-                <input type="text" id="signin-username" placeholder="Username">
-                <input type="password" id="signin-password" placeholder="Password">
-                <button id="signin-btn" class="btn btn-primary">Sign In</button>
-                <div id="signin-noti"></div>
+            <div class="main-sec">
+                <h2>🎮 ยินดีต้อนรับสู่ GuessThePic!</h2>
+                <p>เกมทายภาพสุดท้าทาย กรอกชื่อผู้เล่นเพื่อเริ่มเล่น</p>
+                <p class="note">หมายเหตุ: แต่ละชื่อผู้เล่นสามารถเล่นได้เพียงครั้งเดียว</p>
+                <input type="text" id="username-input" placeholder="กรอกชื่อผู้เล่น (3-12 ตัวอักษร)" maxlength="12">
+                <button id="enter-game-btn" class="btn btn-primary">เข้าสู่เกม</button>
+                <div id="enter-game-noti"></div>
             </div>
         </div>
     </main>

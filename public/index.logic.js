@@ -1,11 +1,6 @@
-const signupUsernameInput = document.getElementById('signup-username');
-const signupPasswordInput = document.getElementById('signup-password');
-const signinUsernameInput = document.getElementById('signin-username');
-const signinPasswordInput = document.getElementById('signin-password');
-const signupBtn = document.getElementById('signup-btn');
-const signinBtn = document.getElementById('signin-btn');
-const signup_noti = document.getElementById('signup-noti');
-const signin_noti = document.getElementById('signin-noti');
+const usernameInput = document.getElementById('username-input');
+const enterGameBtn = document.getElementById('enter-game-btn');
+const enterGameNoti = document.getElementById('enter-game-noti');
 
 // --- Debugging Functionality ---
 const debug = false;
@@ -16,75 +11,47 @@ const warn = (msg) => debug && console.warn(prefix + msg);
 const err = (msg) => debug && console.error(prefix + msg);
 // --- End Debugging Functionality ---
 
-function showSignupMessage(message, isError = false) {
-    signup_noti.textContent = message;
-    signup_noti.style.color = isError ? '#fa4646' : '#5ae06c';
-}
-function showSigninMessage(message, isError = false) {
-    signin_noti.textContent = message;
-    signin_noti.style.color = isError ? '#fa4646' : '#5ae06c';
+function showMessage(message, isError = false) {
+    enterGameNoti.textContent = message;
+    enterGameNoti.style.color = isError ? '#fa4646' : '#5ae06c';
 }
 
-function clearSignupMsg() {
-    signup_noti.textContent = '';
-}
-function clearSigninMsg() {
-    signin_noti.textContent = '';
+function clearMessage() {
+    enterGameNoti.textContent = '';
 }
 
-
-signupBtn.addEventListener('click', async () => {
-    clearSignupMsg();
-    const username = signupUsernameInput.value.trim();
-    const password = signupPasswordInput.value.trim();
-
-
-    try {
-        const response = await fetch('/api/register', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                username: username,
-                password: password
-            })
-        });
-
-        const responseBodyText = await response.text();
-
-        if (response.ok) {
-            showSignupMessage('Sign up successful! Please sign in.', false);
-            signupUsernameInput.value = '';
-            signupPasswordInput.value = '';
-        } else {
-            showSignupMessage(responseBodyText || `Sign up failed (Status: ${response.status}).`, true);
-        }
-    } catch (error) {
-        console.error('Error signing up:', error);
-        showSignupMessage('Network error during sign up. Please check connection and try again.', true);
+// Enter key support
+usernameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        enterGameBtn.click();
     }
 });
 
-signinBtn.addEventListener('click', async () => {
-    clearSigninMsg();
-    const signinUsername = signinUsernameInput.value.trim();
-    const password = signinPasswordInput.value.trim();
+enterGameBtn.addEventListener('click', async () => {
+    clearMessage();
+    const username = usernameInput.value.trim();
 
-    if (!signinUsername || !password) {
-        showSigninMessage('Please enter your username and password.', true);
+    if (!username) {
+        showMessage('กรุณากรอกชื่อผู้เล่น', true);
+        return;
+    }
+
+    if (username.length < 3 || username.length > 12) {
+        showMessage('ชื่อผู้เล่นต้องมีความยาว 3-12 ตัวอักษร', true);
         return;
     }
 
     try {
-        const response = await fetch('/api/login', {
+        enterGameBtn.disabled = true;
+        enterGameBtn.textContent = 'กำลังเข้าสู่เกม...';
+
+        const response = await fetch('/api/enter-game', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                username: signinUsername,
-                password: password
+                username: username
             })
         });
 
@@ -94,33 +61,36 @@ signinBtn.addEventListener('click', async () => {
             const responseUsername = data.username;
 
             if (!token || !responseUsername) {
-                 err("Login response missing token or username:", data);
-                 showSigninMessage('Login failed: Invalid response from server.', true);
-                 return;
+                err("Enter game response missing token or username:", data);
+                showMessage('เกิดข้อผิดพลาด: ไม่สามารถเข้าเกมได้', true);
+                return;
             }
 
             localStorage.setItem('token', token);
             sessionStorage.setItem('username', responseUsername);
-            // showSigninMessage('Sign in successful! Redirecting...', false);
+
             Swal.fire({
-                // position: "top-end",
                 icon: "success",
-                title: "Sign in successful! Redirecting...",
+                title: `ยินดีต้อนรับ ${responseUsername}!`,
+                text: "เตรียมพร้อมเข้าสู่เกม...",
                 showConfirmButton: false,
-                timer: 1500,
+                timer: 2000,
                 theme: "dark"
             });
 
             setTimeout(() => {
-                 window.location.href = 'game.html';
+                window.location.href = 'game.html';
             }, 2000);
 
         } else {
             const errorMessage = await response.text();
-            showSigninMessage(errorMessage || `Sign in failed (Status: ${response.status}).`, true);
+            showMessage(errorMessage || 'ไม่สามารถเข้าเกมได้', true);
         }
     } catch (error) {
-        err('Error signing in:', error);
-        showSigninMessage('Network error during sign in. Please check connection and try again.', true);
+        err('Error entering game:', error);
+        showMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง', true);
+    } finally {
+        enterGameBtn.disabled = false;
+        enterGameBtn.textContent = 'เข้าสู่เกม';
     }
 });

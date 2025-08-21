@@ -28,7 +28,7 @@ app.get('/socket.io/socket.io.js', (req, res) => {
 
 const secretKey = process.env.JWT_SECRET || 'your_secret_key';
 
-// Middleware to verify JWT (เหมือนเดิม)
+// Middleware to verify JWT (ปรับให้รองรับ token แบบใหม่)
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -43,74 +43,48 @@ const authenticateToken = (req, res, next) => {
              if (err.name === 'JsonWebTokenError') return res.status(403).send('Invalid token.');
             return res.status(403).send('Invalid token.');
         }
-        req.user = { userId: user.userId, username: user.username };
+        req.user = { username: user.username };
         next();
     });
 };
 
 
-// Register (Sign-up) Endpoint
-app.post('/api/register', async (req, res) => {
-    const { username, password } = req.body;
+// Enter Game Endpoint (เข้าเกมโดยใช้ชื่อผู้ใช้)
+app.post('/api/enter-game', async (req, res) => {
+    const { username } = req.body;
 
-    if (!username || !password) {
-        return res.status(400).send('Please enter a username and password.');
-    }
-    if (password.length < 8) {
-        return res.status(400).send('Password must be at least 8 characters long.');
+    if (!username) {
+        return res.status(400).send('Please enter a username.');
     }
     if (username.length < 3 || username.length > 12) {
         return res.status(400).send('Username must be between 3 to 12 characters long.');
     }
 
     try {
-        // Sequelize: ใช้ User.create() ซึ่งจะสร้างและบันทึกข้อมูลลง DB ทันที
-        // Hook 'beforeCreate' ที่เราตั้งไว้ใน db.js จะทำการ hash password อัตโนมัติ
-        await User.create({ username, password });
-        res.status(201).send('User registered successfully!');
-    } catch (error) {
-        // Sequelize จะโยน error ที่มี name: 'SequelizeUniqueConstraintError' ถ้า username ซ้ำ
-        if (error.name === 'SequelizeUniqueConstraintError') {
-            return res.status(400).send('Username already exists.');
-        }
-        console.error('Error registering user:', error);
-        res.status(500).send('Error registering user');
-    }
-});
-
-// Login (Sign-in) Endpoint
-app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
-
-     if (!username || !password) {
-        return res.status(400).send('Please provide username and password.');
-    }
-
-    try {
-        // Sequelize: ใช้ findOne และระบุเงื่อนไขใน 'where'
-        const user = await User.findOne({ where: { username } });
-        if (!user) {
-            return res.status(401).send('Invalid username or password.');
+        // ตรวจสอบว่า username ซ้ำหรือไม่
+        const existingUser = await User.findOne({ where: { username } });
+        if (existingUser) {
+            return res.status(400).send('Username already taken. Please choose another name.');
         }
 
-        // Method 'comparePassword' ที่เราเพิ่มใน db.js ยังคงใช้ได้เหมือนเดิม
-        const isPasswordValid = await user.comparePassword(password);
-        if (!isPasswordValid) {
-            return res.status(401).send('Invalid username or password.');
-        }
-
-        // userId ใน Sequelize คือ 'id' (primary key)
-        const payload = { userId: user.id, username: user.username };
-        const token = jwt.sign(payload, secretKey, { expiresIn: '1h' });
+        // สร้าง User ใหม่ (ไม่ต้องใช้รหัสผ่าน)
+        await User.create({ username, password: 'no-password' });
+        
+        // สร้าง JWT token
+        const payload = { username: username };
+        const token = jwt.sign(payload, secretKey, { expiresIn: '24h' });
 
         res.status(200).json({
-            message: 'Login successful!',
+            message: 'Welcome to the game!',
             token: token,
-            username: user.username
+            username: username
         });
     } catch (error) {
-        console.error('Error logging in:', error);
-        res.status(500).send('Error logging in');
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(400).send('Username already taken. Please choose another name.');
+        }
+        console.error('Error entering game:', error);
+        res.status(500).send('Error entering game');
     }
 });
 

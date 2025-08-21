@@ -24,33 +24,10 @@ const User = sequelize.define('User', {
     },
     password: {
         type: DataTypes.STRING,
-        allowNull: false
-    }
-}, {
-    // Sequelize Hooks (ทำงานคล้าย Mongoose middleware)
-    hooks: {
-        // ก่อนที่จะสร้าง user ใหม่ (Create)
-        beforeCreate: async (user) => {
-            if (user.password) {
-                const salt = await bcrypt.genSalt(10);
-                user.password = await bcrypt.hash(user.password, salt);
-            }
-        },
-        // ก่อนที่จะอัปเดต user (Update)
-        beforeUpdate: async(user) => {
-            // เช็คว่า field 'password' มีการเปลี่ยนแปลงหรือไม่
-            if (user.changed('password')) {
-                const salt = await bcrypt.genSalt(10);
-                user.password = await bcrypt.hash(user.password, salt);
-            }
-        }
+        allowNull: true, // เปลี่ยนเป็น nullable เพราะไม่ใช้รหัสผ่านแล้ว
+        defaultValue: 'no-password'
     }
 });
-
-// เพิ่ม method สำหรับเปรียบเทียบรหัสผ่านเข้าไปใน Model
-User.prototype.comparePassword = async function(candidatePassword) {
-    return bcrypt.compare(candidatePassword, this.password);
-};
 
 
 // --- 2. กำหนด Model 'Score' ---
