@@ -66,7 +66,7 @@ function formatRank(rank) {
 function clearAuthDataAndRedirect() {
     localStorage.removeItem('token');
     sessionStorage.removeItem('username');
-    window.location.href = 'index.html'; // Redirect to login/home
+    window.location.href = '/'; // Redirect to login/home
 }
 // --- End Helper Functions ---
 
@@ -96,7 +96,7 @@ function requestLeaderboardUpdate() {
 logoutButton.addEventListener('click', () => {
     localStorage.removeItem('token');
     sessionStorage.removeItem('username');
-    window.location.href = 'index.html';
+    window.location.href = '/';
 });
 sortBySelect.addEventListener('change', () => {
     log(`Sort changed to: ${sortBySelect.value}`);
@@ -364,11 +364,11 @@ function handleUserOutsideTop10(userData, top10Usernames, sortBy) {
 
 // --- Initial Load ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Auto-logout timer: 30 seconds after arriving at leaderboard
+    // Auto-logout timer: 15 seconds after arriving at leaderboard
     setTimeout(() => {
         log('Auto-logout timer expired. Logging out and redirecting to index.');
         clearAuthDataAndRedirect();
-    }, 30000); // 30 seconds
+    }, 15000); // 15 seconds
 
     if (token && currentUsername) {
         log('Token and username found on load. Fetching initial leaderboard.');

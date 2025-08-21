@@ -22,6 +22,19 @@ app.use(express.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Custom routes for clean URLs (without .html)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+app.get('/game', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/game.html'));
+});
+
+app.get('/leaderboard', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/scoreboard.html'));
+});
+
 app.get('/socket.io/socket.io.js', (req, res) => {
   res.sendFile(path.join(__dirname, '../node_modules/socket.io/client-dist/socket.io.js'));
 });
@@ -73,7 +86,7 @@ app.post('/api/enter-game', async (req, res) => {
         }
 
         // สร้าง User ใหม่ (ไม่ต้องใช้รหัสผ่าน)
-        await User.create({ username, password: 'no-password' });
+        await User.create({ username });
         
         // สร้าง JWT token
         const payload = { username: username };

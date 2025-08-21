@@ -1,6 +1,5 @@
 const { Sequelize, DataTypes, Op } = require('sequelize');
 const path = require('path');
-const bcrypt = require('bcrypt');
 
 // กำหนด path ของไฟล์ฐานข้อมูล SQLite
 const storagePath = path.join(__dirname, '..', 'data', 'database.sqlite');
@@ -23,11 +22,6 @@ const User = sequelize.define('User', {
         },
         // SQLite: กำหนด collation เป็น BINARY เพื่อให้ case sensitive
         collate: 'BINARY'
-    },
-    password: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        defaultValue: 'no-password'
     }
 });
 

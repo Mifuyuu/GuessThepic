@@ -88,9 +88,9 @@ function updatePlayerTimeDisplay() {
         playerTimeLeftSpan.textContent = timeText;
         
         // เปลี่ยนสีเมื่อเวลาใกล้หมด
-        if (playerTimer.timeRemaining <= 30) {
+        if (playerTimer.timeRemaining <= 20) {
             playerTimeLeftSpan.style.color = '#ff4444';
-        } else if (playerTimer.timeRemaining <= 60) {
+        } else if (playerTimer.timeRemaining <= 40) {
             playerTimeLeftSpan.style.color = '#ffaa00';
         } else {
             playerTimeLeftSpan.style.color = '#fff';
@@ -111,11 +111,13 @@ async function handlePlayerTimeUp() {
         icon: "info",
         timer: 3000,
         showConfirmButton: false,
-        timerProgressBar: true
+        timerProgressBar: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false
     });
     
     // ส่งไปหน้า leaderboard หลังจาก popup ปิด
-    window.location.href = 'scoreboard.html';
+    window.location.href = '/leaderboard';
 }
 
 async function initPlayerTimer() {
@@ -264,7 +266,7 @@ window.addEventListener('load', async () => {
 
     if (!token || !sessionUser) {
         log('Game page: Token or username missing on load. Redirecting.');
-        window.location.href = 'index.html';
+        window.location.href = '/';
         return;
     }
 
@@ -294,6 +296,12 @@ async function onRest() {
     startBtn.style.display = 'flex';
     timeLeftSpan.textContent = 'N/A';
     clearInterval(gameData.timer);
+    
+    // ซ่อนปุ่ม reveal เมื่อไม่ได้เล่นเกม
+    const revealMenu = document.getElementById('reveal-menu');
+    if (revealMenu) {
+        revealMenu.style.display = 'none';
+    }
 }
 
 async function initGame(skipTimerInit = false) {
@@ -312,13 +320,15 @@ async function initGame(skipTimerInit = false) {
 
     // เริ่มจับเวลาผู้เล่นเฉพาะเมื่อไม่ได้มาจาก popup
     if (!skipTimerInit) {
-        // Fetch ข้อมูลผู้เล่นก่อน (เพื่อให้ได้ timeRemaining ที่ถูกต้อง)
-        await fetchPlayerData();
-        
         const timerInitialized = await initPlayerTimer();
         if (!timerInitialized) {
             // ถ้าไม่สามารถเริ่มจับเวลาได้ (เวลาหมดแล้ว) ให้ redirect ไป leaderboard
             return;
+        }
+    } else {
+        // หาก skip timer init แต่ timer ยังไม่ทำงาน ให้เริ่มใหม่
+        if (!playerTimer.isActive && playerTimer.timeRemaining > 0) {
+            startPlayerTimer();
         }
     }
 
@@ -418,7 +428,7 @@ async function fetchPlayerData() {
                 err('Authentication failed (401/403). Redirecting...');
                 localStorage.removeItem('token');
                 sessionStorage.removeItem('username');
-                window.location.href = 'index.html';
+                window.location.href = '/';
             } else {
                 const errorText = await response.text();
                 err(`Failed to fetch player data (${response.status}):`, errorText);
@@ -549,7 +559,9 @@ function showGameResult(selectedIndex) {
             icon: "success",
             timer: 2000,
             showConfirmButton: false,
-            timerProgressBar: true
+            timerProgressBar: true,
+            allowOutsideClick: false,
+            allowEscapeKey: false
         }).then(() => {
             // เริ่มเกมใหม่ก่อน แล้วค่อยเริ่ม player timer
             initGame(true); // skip timer init เพราะเราจะเริ่มเองแล้ว
@@ -568,11 +580,13 @@ function showGameResult(selectedIndex) {
         Swal.fire({
             theme: "dark",
             title: "YOU LOSE!",
-            text: `💩 เสียใจด้วยคุณตอบผิดนะ -${penaltyWrong} คะแนน\nคำตอบที่ถูกคือ: ${currentImage.choices[currentImage.correct]}`,
+            text: `💩 เสียใจด้วยคุณตอบผิดนะ -${penaltyWrong} คะแนน คำตอบที่ถูกคือ: ${currentImage.choices[currentImage.correct]}`,
             icon: "error",
             timer: 2000,
             showConfirmButton: false,
-            timerProgressBar: true
+            timerProgressBar: true,
+            allowOutsideClick: false,
+            allowEscapeKey: false
         }).then(() => {
             // เริ่มเกมใหม่ก่อน แล้วค่อยเริ่ม player timer
             initGame(true); // skip timer init เพราะเราจะเริ่มเองแล้ว
@@ -678,11 +692,13 @@ function showTimeoutResult() {
     Swal.fire({
         theme: "dark",
         title: "TIME 'S UP!",
-        text: `⏳ เสียใจด้วย หมดเวลาแล้วนะ -${timeOutPenalty} คะแนน\nคำตอบที่ถูกคือ: ${currentImage.choices[currentImage.correct]}`,
+        text: `⏳ เสียใจด้วย หมดเวลาแล้วนะ -${timeOutPenalty} คะแนน คำตอบที่ถูกคือ: ${currentImage.choices[currentImage.correct]}`,
         icon: "error",
         timer: 2000,
         showConfirmButton: false,
-        timerProgressBar: true
+        timerProgressBar: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false
     }).then(() => {
         // เริ่มเกมใหม่ก่อน แล้วค่อยเริ่ม player timer
         initGame(true); // skip timer init เพราะเราจะเริ่มเองแล้ว
@@ -828,39 +844,12 @@ function renderChoices() {
         const button = document.createElement('button');
         
         button.className = 'choice-button';
-        button.innerHTML = `<strong>${buttonLabels[index]}:</strong> ${choiceText}`;
+        button.innerHTML = `<strong>${buttonLabels[index]}.</strong> ${choiceText}`;
         button.disabled = !gameData.isActive;
         
-        // กำหนดสไตล์ปุ่ม
-        button.style.cssText = `
-            background-color: ${buttonColors[index]};
-            color: white;
-            border: none;
-            padding: 15px 20px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            flex: 1;
-            min-width: 200px;
-            max-width: 250px;
-        `;
-        
-        // เพิ่ม hover effect
-        button.addEventListener('mouseenter', () => {
-            if (!button.disabled) {
-                button.style.transform = 'translateY(-2px)';
-                button.style.boxShadow = '0 6px 12px rgba(0,0,0,0.3)';
-            }
-        });
-        
-        button.addEventListener('mouseleave', () => {
-            button.style.transform = 'translateY(0)';
-            button.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
-        });
+        // ใช้ data attribute สำหรับสี (แทน inline styles)
+        button.dataset.colorIndex = index;
+        button.dataset.originalIndex = originalIndex;
         
         button.addEventListener('click', () => {
             if (gameData.isActive) {
@@ -877,70 +866,39 @@ function renderChoices() {
 }
 
 function renderRandomRevealButton() {
-    let revealBtn = document.querySelector('#random-reveal-btn');
-
-    if (!revealBtn) {
-        revealBtn = document.createElement('button');
-        revealBtn.id = 'random-reveal-btn';
-        revealBtn.className = 'btn btn-reveal';
+    // ใช้ปุ่มที่อยู่ในเมนูด้านขวาแทน
+    const revealMenu = document.getElementById('reveal-menu');
+    let revealBtn = document.getElementById('random-reveal-btn');
+    
+    if (revealMenu && revealBtn) {
+        // แสดงเมนูปุ่ม reveal
+        revealMenu.style.display = 'block';
         
-        // เพิ่มปุ่มลงใน container เดียวกับปุ่มตอบ
-        const choiceContainer = document.querySelector('.choice-buttons-container');
-        if (choiceContainer) {
-            choiceContainer.appendChild(revealBtn);
-        } else {
-            choicesDiv.appendChild(revealBtn);
+        // อัพเดตข้อความและ state ของปุ่ม
+        const buttonText = revealBtn.querySelector('span');
+        if (buttonText) {
+            buttonText.textContent = `สุ่มเปิดช่อง (${gameData.randomReveals})`;
         }
         
-        revealBtn.addEventListener('click', handleRandomReveal);
-    } else {
+        // ลบ event listeners เดิม
         const newBtn = revealBtn.cloneNode(true);
         revealBtn.parentNode.replaceChild(newBtn, revealBtn);
-        newBtn.addEventListener('click', handleRandomReveal);
         revealBtn = newBtn;
-    }
-
-    // สไตล์ปุ่มสีม่วงในแถวเดียวกัน
-    revealBtn.style.cssText = `
-        background-color: #2e9dbbff;
-        color: white;
-        border: none;
-        padding: 15px 20px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-align: center;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        flex: 1;
-        min-width: 200px;
-        max-width: 250px;
-    `;
-    
-    // เพิ่ม hover effect
-    revealBtn.addEventListener('mouseenter', () => {
-        if (!revealBtn.disabled) {
-            revealBtn.style.backgroundColor = '#8e44ad';
-            revealBtn.style.transform = 'translateY(-2px)';
-            revealBtn.style.boxShadow = '0 6px 12px rgba(0,0,0,0.3)';
+        
+        // เพิ่ม event listener ใหม่
+        revealBtn.addEventListener('click', handleRandomReveal);
+        
+        // ตั้งค่า disabled state
+        revealBtn.disabled = (gameData.randomReveals <= 0 || !gameData.isActive);
+        
+        // อัพเดต appearance ตาม state
+        if (revealBtn.disabled) {
+            revealBtn.style.opacity = '0.5';
+            revealBtn.style.cursor = 'not-allowed';
+        } else {
+            revealBtn.style.opacity = '1';
+            revealBtn.style.cursor = 'pointer';
         }
-    });
-    
-    revealBtn.addEventListener('mouseleave', () => {
-        if (!revealBtn.disabled) {
-            revealBtn.style.backgroundColor = '#9b59b6';
-        }
-        revealBtn.style.transform = 'translateY(0)';
-        revealBtn.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
-    });
-
-    revealBtn.innerHTML = `<i class="fa-solid fa-puzzle-piece"></i> สุ่มเปิดช่อง (${gameData.randomReveals})`;
-    revealBtn.disabled = (gameData.randomReveals <= 0 || !gameData.isActive);
-    
-    if (revealBtn.disabled) {
-        revealBtn.style.backgroundColor = '#95a5a6';
-        revealBtn.style.cursor = 'not-allowed';
     }
 }
 

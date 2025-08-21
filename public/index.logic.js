@@ -79,7 +79,7 @@ enterGameBtn.addEventListener('click', async () => {
             });
 
             setTimeout(() => {
-                window.location.href = 'game.html';
+                window.location.href = '/game';
             }, 2000);
 
         } else {
